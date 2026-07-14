@@ -1,0 +1,43 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Deploy Frontend to Railway
+        run: |
+          railway up \
+            --service assistente-caneta-frontend \
+            --dockerfile ./Dockerfile \
+            --project-id ${{ secrets.RAILWAY_PROJECT_ID }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Backend to Railway
+        run: |
+          railway up \
+            --service assistente-caneta-backend \
+            --dockerfile ./Dockerfile.backend \
+            --project-id ${{ secrets.RAILWAY_PROJECT_ID }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Output deployment URLs
+        run: |
+          echo "Frontend deployed!"
+          echo "Backend deployed!"
+          railway link --project-id ${{ secrets.RAILWAY_PROJECT_ID }}
