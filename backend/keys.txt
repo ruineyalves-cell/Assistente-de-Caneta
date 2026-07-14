@@ -1,0 +1,7 @@
+Copie para o seu .env:
+
+JWT_SECRET=b5Sxt8b4hHZGfDM_YcSXSmUwivZU0PVchbaQXTBt555l8qP1DV7MQhPfX6E4SWTO
+DATA_ENCRYPTION_KEY=e465c97a788f88e402663811b943fe286ab0d1f442a1051b76b4dfb0ca1d4f6d
+
+⚠️ Em produção use chaves DIFERENTES das de desenvolvimento.
+⚠️ Se a DATA_ENCRYPTION_KEY for perdida, os dados criptografados são IRRECUPERÁVEIS — guarde em cofre (ex.: variáveis do Railway + backup seguro).
