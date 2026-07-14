@@ -1,0 +1,28 @@
+# Segurança — NUNCA commitar
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Node
+node_modules/
+npm-debug.log*
+coverage/
+
+# Build
+dist/
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dados locais
+*.sqlite
+pgdata/
+uploads/
+relatorios/
