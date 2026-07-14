@@ -72,7 +72,7 @@ function query(sql, params = []) {
     const match = sql.match(/FROM\s+(\w+)/i);
     if (match) table = match[1];
 
-    let rows = table && data[table] ? [...data[table]] : [];
+    let rows = table && data[table] ? JSON.parse(JSON.stringify(data[table])) : [];
 
     // WHERE clause simples ($1 syntax)
     if (sql.includes('WHERE')) {
