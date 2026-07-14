@@ -11,7 +11,7 @@
 - [ ] Advogado emitiu parecer sobre CONFORMIDADE_ANVISA.md (enquadramento fora do SaMD)
 - [ ] CNPJ constituído com CNAE adequado (62.01-5 desenvolvimento de software; avaliar secundários)
 - [ ] DPO/Encarregado nomeado e e-mail publicado (art. 41 LGPD)
-- [ ] **Responsável clínico (CRM/CRN) contratado e nomeado** — revisou todo conteúdo educativo
+- [ ] Advogado validou a POLITICA_CONTEUDO_EDUCATIVO.md (modelo "só fonte oficial, sempre citada" — substitui a exigência de responsável clínico)
 
 ### LGPD técnica (verificar no código antes do deploy)
 - [ ] Tela de consentimento destacado para dados de saúde (registro com data/hora/versão)
@@ -23,13 +23,15 @@
 - [ ] Scrubbing de PII configurado no Sentry
 - [ ] RIPD (Relatório de Impacto) redigido e arquivado
 
-### Conteúdo
-- [ ] Toda medicação no banco tem: bula URL oficial + data de captura + revisão do responsável clínico
-- [ ] Todo alerta educativo cita fonte e termina com orientação de consultar o médico
-- [ ] Nenhum texto do app usa verbos de conduta clínica ("tome", "aumente", "suspenda")
+### Conteúdo (regras da POLITICA_CONTEUDO_EDUCATIVO.md)
+- [ ] Toda medicação no banco tem: bula URL oficial (Bulário Eletrônico Anvisa) + data de captura + hash do original
+- [ ] Todo trecho educativo é reprodução LITERAL de fonte da lista fechada, com citação completa visível
+- [ ] Todo alerta segue o template fixo e termina com "converse com seu médico"
+- [ ] Nenhum texto do app usa verbos de conduta clínica ("tome", "aumente", "suspenda") fora de citação literal
 
 ## B. Fortemente recomendados
 
+- [ ] Profissional de saúde parceiro para conferência anual do conteúdo (parecer avulso — camada extra de defesa, NÃO é condição de launch)
 - [ ] Registro da marca "Assistente de Caneta" no INPI (classe 9 e 42)
 - [ ] Seguro de responsabilidade civil profissional (E&O) — cotar
 - [ ] Termo de uso do Portal Profissional assinado eletronicamente pelo profissional no primeiro acesso

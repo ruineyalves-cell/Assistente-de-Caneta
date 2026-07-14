@@ -74,5 +74,5 @@ npm test             # testes unitários
 ## ⚠️ Avisos
 
 1. **Jurídico:** os documentos em `juridico/` são minutas técnicas — **exigem validação por advogado** antes do launch.
-2. **Responsável clínico:** o app exige um profissional de saúde (CRM/CRN) como responsável clínico identificado.
+2. **Conteúdo educativo:** todo conteúdo é reprodução literal de fonte oficial pública (bulas Anvisa, ABESO, MS, etc.) com citação. Sem responsável clínico obrigatório. Ver `juridico/POLITICA_CONTEUDO_EDUCATIVO.md`.
 3. **Dados sensíveis:** dados de saúde são criptografados em repouso (AES-256-GCM) e em trânsito (TLS).

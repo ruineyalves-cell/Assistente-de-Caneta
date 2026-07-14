@@ -27,28 +27,42 @@ O Assistente de Caneta é um **SaMD** (Software as a Medical Device) sujeito a r
 
 ## 4. Estratégia de mitigação (para permanecer fora do escopo SaMD)
 
-1. **Nenhuma saída do app pode orientar conduta clínica.** Alertas sempre no formato: *"[Fonte pública] recomenda X. Seu registro indica Y. Converse com seu médico."* — nunca *"faça X"* ou *"aumente/diminua Z"*.
-2. **Score de conformidade** apresentado como "aderência ao seu plano de registro", não como indicador clínico; sem faixas de "risco".
-3. **Sem interpretação individualizada**: as metas (proteína/kg, hidratação) vêm de diretriz pública geral, exibidas com fonte, ajustáveis apenas pelo profissional do paciente.
-4. **Sem integração de decisão automática** com dispositivos (Health Connect apenas exibe, não atua).
-5. Rotular o app nas lojas como **"Saúde e fitness / bem-estar"**, não "Médico".
-6. Manter **dossiê técnico** (este documento + arquitetura + fontes) para eventual questionamento.
+A estratégia é tripla, reforçada pela **POLITICA_CONTEUDO_EDUCATIVO.md**:
+
+1. **Zero conteúdo autoral**: todo alerta é reprodução LITERAL de fonte oficial pública (Anvisa, ABESO, MS, etc.) com citação completa. Exemplos:
+   - ❌ "Você deveria beber mais água" ← nosso; proibido.
+   - ✅ "[MS — Guia Alimentar para a População Brasileira] recomenda hidratação adequada. Seu registro indica 2L. Converse com seu médico." ← fonte citada; permitido.
+
+2. **Nenhuma orientação clínica original**: verbos de conduta proibidos fora de citação literal ("tome", "aumente", "suspenda", "evite"). Alertas sempre seguem template fixo: "[FONTE] informa: [trecho]. Seu registro indica [dado]. Converse com seu médico."
+
+3. **Score de conformidade** apresentado como "aderência ao seu plano de registro", não como indicador clínico; sem faixas de "risco".
+
+4. **Sem interpretação individualizada**: as metas (proteína/kg, hidratação) vêm de diretriz pública geral (ABESO, MS), exibidas com fonte, ajustáveis apenas pelo profissional do paciente.
+
+5. **Sem integração de decisão automática** com dispositivos (Health Connect apenas exibe, não atua).
+
+6. Rotular o app nas lojas como **"Saúde e fitness / bem-estar"**, não "Médico".
+
+7. Manter **dossiê técnico** (este documento + POLITICA_CONTEUDO_EDUCATIVO.md + arquitetura + hash dos originais) para eventual questionamento.
 
 ## 5. Conclusão preliminar
 
-Com as mitigações do item 4, o app se enquadra como **software de bem-estar e gestão de dados autodeclarados**, fora do escopo de registro SaMD (RDC 657/2022, art. 1º, §2º). **Não requer registro Anvisa**, mas requer:
+Com as mitigações do item 4 (especialmente zero conteúdo autoral), o app se enquadra como **software de bem-estar e gestão de dados autodeclarados**, fora do escopo de registro SaMD (RDC 657/2022, art. 1º, §2º). **Não requer registro Anvisa**, mas requer:
 
 - ✅ Conformidade LGPD plena (dados sensíveis — art. 11);
-- ✅ Responsável clínico revisor de conteúdo (boas práticas + defesa em eventual questionamento);
-- ✅ Vigilância contínua: se qualquer feature futura passar a **interpretar dados para fins clínicos** (ex.: IA que sugere conduta), o enquadramento muda e o registro SaMD passa a ser exigido — reavaliar A CADA sprint.
+- ✅ Política de Conteúdo Educativo rigorosa e auditável (POLITICA_CONTEUDO_EDUCATIVO.md);
+- ✅ Checklist CI no pipeline (verificar verbos proibidos, presença de fonte, presença de "converse com seu médico");
+- ✅ Professional de saúde parceiro para conferência anual (recomendado, não obrigatório — camada de defesa);
+- ✅ Vigilância contínua: se qualquer feature futura passar a **criar conteúdo autoral ou interpretar dados para fins clínicos** (ex.: IA que sugere conduta, planos alimentares personalizados), o enquadramento muda e o registro SaMD passa a ser exigido — reavaliar A CADA sprint.
 
 ## 6. Registro de decisões de produto com impacto regulatório
 
 | Data | Decisão | Impacto |
 |---|---|---|
-| 2026-07 | Motor de métricas 100% determinístico, sem IA | Mantém fora do escopo SaMD |
-| 2026-07 | Alertas sempre com fonte + "converse com seu médico" | Mantém fora do escopo SaMD |
-| 2026-07 | OCR de receituário (fase 2) apenas preenche formulário, com confirmação manual | Baixo risco — sem decisão automática |
+| 2026-07-14 | Motor de métricas 100% determinístico, sem IA | Mantém fora do escopo SaMD |
+| 2026-07-14 | POLITICA_CONTEUDO_EDUCATIVO.md: conteúdo SEMPRE é reprodução literal de fonte oficial (Anvisa, ABESO, MS, ADA) com citação completa | Elimina necessidade de responsável clínico revisor; mantém fora do escopo SaMD; robusto juridicamente (não é conteúdo nosso, é citado) |
+| 2026-07-14 | Alertas seguem template fixo + sempre terminam com "converse com seu médico" | Reforça que não é orientação clínica |
+| 2026-07-14 | OCR de receituário (fase 2) apenas preenche formulário, com confirmação manual | Baixo risco — sem decisão automática |
 
 ## 7. Checklist para o advogado regulatório
 
