@@ -1,0 +1,82 @@
+name: assistente_caneta
+description: App de acompanhamento de conformidade para pacientes em tratamento GLP-1 no Brasil.
+
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP & API
+  http: ^1.1.0
+  dio: ^5.3.0
+
+  # Auth
+  flutter_secure_storage: ^9.0.0
+
+  # State management
+  provider: ^6.0.0
+
+  # UI
+  cupertino_icons: ^1.0.0
+  fl_chart: ^0.65.0           # Gráficos
+  flutter_localizations:
+    sdk: flutter
+
+  # Dates & formatting
+  intl: ^0.19.0
+
+  # Utilities
+  uuid: ^4.0.0
+
+  # PDF generation
+  pdf: ^3.10.0
+  path_provider: ^2.1.0
+
+  # Notifications (local)
+  flutter_local_notifications: ^16.0.0
+
+  # Health integration (simulado/opcional)
+  # health: ^8.0.0
+
+  # Storage local
+  hive: ^2.2.0
+  hive_flutter: ^1.1.0
+
+  # Image picker (receituário)
+  image_picker: ^1.0.0
+
+  # Google ML Kit (OCR local)
+  google_mlkit_text_recognition: ^0.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+  # Testing
+  mockito: ^5.4.0
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  # Assets (logo, ícones, etc)
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  # Fonts (Google Fonts, se needed)
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: assets/fonts/Roboto-Regular.ttf
+  #       - asset: assets/fonts/Roboto-Bold.ttf
+  #         weight: 700
