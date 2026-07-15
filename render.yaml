@@ -7,8 +7,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
       - key: CORS_ORIGIN
         value: "*"
       - key: JWT_SECRET
