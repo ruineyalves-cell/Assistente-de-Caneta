@@ -83,7 +83,7 @@ class ApiService {
           'nome': nome,
           'email': email,
           'senha': senha,
-          'data_nascimento': dataNascimento,
+          'dataNascimento': dataNascimento,
         },
       );
       return response.data;
@@ -105,7 +105,7 @@ class ApiService {
         },
       );
       final data = response.data as Map<String, dynamic>;
-      setTokens(data['access_token'] as String, data['refresh_token'] as String);
+      setTokens(data['accessToken'] as String, data['refreshToken'] as String);
       return data;
     } on DioException catch (e) {
       throw _parseError(e);
@@ -116,10 +116,11 @@ class ApiService {
     try {
       final response = await _dio.post(
         '/api/auth/refresh',
-        data: {'refresh_token': _refreshToken},
+        data: {'refreshToken': _refreshToken},
       );
       final data = response.data as Map<String, dynamic>;
-      setTokens(data['access_token'] as String, data['refresh_token'] as String);
+      // O refresh retorna apenas um novo accessToken; mantém o refreshToken atual.
+      setTokens(data['accessToken'] as String, _refreshToken!);
       return data;
     } on DioException catch (e) {
       throw _parseError(e);
@@ -128,7 +129,7 @@ class ApiService {
 
   Future<void> logout() async {
     try {
-      await _dio.post('/api/auth/logout');
+      await _dio.post('/api/auth/logout', data: {'refreshToken': _refreshToken});
       clearTokens();
     } on DioException catch (e) {
       throw _parseError(e);
@@ -254,11 +255,15 @@ class ApiService {
 
   // ========== LGPD ==========
 
-  Future<void> registrarConsentimento(String tipo) async {
+  Future<void> registrarConsentimento(
+    String tipo, {
+    String versaoDoc = '0.1.0',
+    bool aceito = true,
+  }) async {
     try {
       await _dio.post(
         '/api/lgpd/consentimento',
-        data: {'tipo': tipo},
+        data: {'tipo': tipo, 'versaoDoc': versaoDoc, 'aceito': aceito},
       );
     } on DioException catch (e) {
       throw _parseError(e);

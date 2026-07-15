@@ -58,7 +58,8 @@ class AuthService extends ChangeNotifier {
         dataNascimento: dataNascimento,
       );
 
-      _userId = response['user_id'].toString();
+      final usuario = (response['usuario'] as Map?) ?? const {};
+      _userId = usuario['id']?.toString();
       _email = email;
       _nome = nome;
 
@@ -90,19 +91,28 @@ class AuthService extends ChangeNotifier {
         senha: senha,
       );
 
-      _accessToken = response['access_token'] as String;
-      _refreshToken = response['refresh_token'] as String;
-      _userId = response['user_id'].toString();
-      _email = email;
-      _nome = response['nome'] as String?;
+      final usuario = (response['usuario'] as Map?) ?? const {};
+      _accessToken = response['accessToken'] as String;
+      _refreshToken = response['refreshToken'] as String;
+      _userId = usuario['id']?.toString();
+      _email = (usuario['email'] as String?) ?? email;
+      _nome = usuario['nome'] as String?;
 
       await _storage.write(key: 'access_token', value: _accessToken);
       await _storage.write(key: 'refresh_token', value: _refreshToken);
       await _storage.write(key: 'user_id', value: _userId);
-      await _storage.write(key: 'email', value: email);
+      await _storage.write(key: 'email', value: _email);
       if (_nome != null) {
         await _storage.write(key: 'nome', value: _nome!);
       }
+
+      // Garante o consentimento LGPD (aceito no cadastro) para liberar os
+      // dados de saúde no backend (requireConsent). Best-effort nos demais.
+      try {
+        await _apiService.registrarConsentimento('privacidade_saude');
+        _apiService.registrarConsentimento('termos_uso');
+        _apiService.registrarConsentimento('disclaimer_medico');
+      } catch (_) {}
 
       _isLoading = false;
       notifyListeners();
