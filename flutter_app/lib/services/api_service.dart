@@ -161,7 +161,7 @@ class ApiService {
     required int alturaCm,
     required double metaProteinaGkg,
     required double metaAguaMlkg,
-    required bool declárouPrescricao,
+    required bool declarouPrescricao,
   }) async {
     try {
       final response = await _dio.put(
@@ -173,7 +173,7 @@ class ApiService {
           'altura_cm': alturaCm,
           'meta_proteina_gkg': metaProteinaGkg,
           'meta_agua_mlkg': metaAguaMlkg,
-          'declarou_prescricao': declárouPrescricao,
+          'declarou_prescricao': declarouPrescricao,
         },
       );
       return response.data as Map<String, dynamic>;
