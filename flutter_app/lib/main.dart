@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'services/auth_service.dart';
@@ -36,6 +37,13 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('pt', 'BR'), Locale('en')],
+        locale: const Locale('pt', 'BR'),
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
@@ -80,6 +88,7 @@ class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool isLoading = false;
+  bool _obscureSenha = true;
   String? errorMessage;
 
   @override
@@ -150,12 +159,20 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                obscureText: true,
+                obscureText: _obscureSenha,
                 decoration: InputDecoration(
                   labelText: 'Senha',
                   hintText: '••••••••',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureSenha
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    tooltip: _obscureSenha ? 'Mostrar senha' : 'Ocultar senha',
+                    onPressed: () =>
+                        setState(() => _obscureSenha = !_obscureSenha),
                   ),
                 ),
               ),
@@ -241,9 +258,51 @@ class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final dataNascimentoController = TextEditingController();
+  DateTime? _dataNascimento;
+  bool _obscureSenha = true;
   bool aceitoTermos = false;
   bool isLoading = false;
   String? errorMessage;
+
+  Future<void> _selecionarData() async {
+    final agora = DateTime.now();
+    final escolhida = await showDatePicker(
+      context: context,
+      initialDate: DateTime(agora.year - 30, agora.month, agora.day),
+      firstDate: DateTime(1900),
+      lastDate: agora,
+      helpText: 'Selecione sua data de nascimento',
+      locale: const Locale('pt', 'BR'),
+    );
+    if (escolhida != null) {
+      setState(() {
+        _dataNascimento = escolhida;
+        final d = escolhida.day.toString().padLeft(2, '0');
+        final m = escolhida.month.toString().padLeft(2, '0');
+        dataNascimentoController.text = '$d/$m/${escolhida.year}';
+      });
+    }
+  }
+
+  /// ISO YYYY-MM-DD exigido pelo backend.
+  String? get _dataNascimentoIso {
+    final dt = _dataNascimento;
+    if (dt == null) return null;
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '${dt.year}-$m-$d';
+  }
+
+  Future<void> _abrirTermos() async {
+    final aceitou = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _TermosSheet(),
+    );
+    if (aceitou == true) {
+      setState(() => aceitoTermos = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -263,8 +322,10 @@ class _RegisterPageState extends State<RegisterPage> {
     final nomeError = Validators.validateNome(nomeController.text);
     final emailError = Validators.validateEmail(emailController.text);
     final passwordError = Validators.validatePassword(passwordController.text);
-    final dataError =
-        Validators.validateDataNascimento(dataNascimentoController.text);
+    final dataIso = _dataNascimentoIso;
+    final dataError = dataIso == null
+        ? 'Selecione sua data de nascimento'
+        : Validators.validateDataNascimento(dataIso);
 
     if (nomeError != null) {
       setState(() => errorMessage = nomeError);
@@ -292,7 +353,7 @@ class _RegisterPageState extends State<RegisterPage> {
         nome: nomeController.text,
         email: emailController.text,
         senha: passwordController.text,
-        dataNascimento: dataNascimentoController.text,
+        dataNascimento: dataIso!,
       );
 
       if (!mounted) return;
@@ -344,39 +405,63 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                obscureText: true,
+                obscureText: _obscureSenha,
                 decoration: InputDecoration(
                   labelText: 'Senha (mínimo 8 caracteres)',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureSenha
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    tooltip: _obscureSenha ? 'Mostrar senha' : 'Ocultar senha',
+                    onPressed: () =>
+                        setState(() => _obscureSenha = !_obscureSenha),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: dataNascimentoController,
+                readOnly: true,
+                onTap: _selecionarData,
                 decoration: InputDecoration(
-                  labelText: 'Data de nascimento (YYYY-MM-DD)',
-                  hintText: '2000-01-15',
+                  labelText: 'Data de nascimento',
+                  hintText: 'DD/MM/AAAA',
+                  suffixIcon: const Icon(Icons.calendar_today),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Checkbox(
-                    value: aceitoTermos,
-                    onChanged: (v) => setState(() => aceitoTermos = v ?? false),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Aceito os termos de uso e política de privacidade',
-                      style: Theme.of(context).textTheme.bodySmall,
+              InkWell(
+                onTap: _abrirTermos,
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    Icon(
+                      aceitoTermos
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: aceitoTermos ? Colors.green : Colors.grey,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        aceitoTermos
+                            ? 'Termos de uso e política de privacidade aceitos'
+                            : 'Ler e aceitar os termos de uso e política de privacidade',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              decoration: aceitoTermos
+                                  ? null
+                                  : TextDecoration.underline,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (errorMessage != null) ...[
                 const SizedBox(height: 16),
@@ -921,6 +1006,143 @@ class ProfilePage extends StatelessWidget {
                   'Seus dados são protegidos conforme LGPD.',
                   style: TextStyle(fontSize: 12),
                 ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ============================================================================
+// TERMOS DE USO — leitura obrigatória com rolagem até o fim
+// ============================================================================
+
+class _TermosSheet extends StatefulWidget {
+  const _TermosSheet();
+
+  @override
+  State<_TermosSheet> createState() => _TermosSheetState();
+}
+
+class _TermosSheetState extends State<_TermosSheet> {
+  final _scroll = ScrollController();
+  bool _leuTudo = false;
+
+  static const String _texto = '''
+TERMOS DE USO E POLÍTICA DE PRIVACIDADE
+Assistente de Caneta — versão 0.1.0 (beta)
+
+1. NATUREZA DO APLICATIVO
+Este aplicativo é uma ferramenta educacional de registro e acompanhamento de conformidade para pessoas em tratamento com medicamentos da classe GLP-1/GIP. Ele NÃO fornece diagnóstico, NÃO substitui a orientação de profissionais de saúde e NÃO é um dispositivo médico.
+
+2. USO PERMITIDO
+2.1. O uso é permitido apenas para maiores de 18 anos.
+2.2. Você é responsável pela veracidade dos dados que registra.
+2.3. As informações educativas exibidas são reproduções de fontes oficiais (bulas Anvisa, ABESO, Ministério da Saúde, ADA), sempre citadas.
+
+3. DADOS E PRIVACIDADE (LGPD — Lei 13.709/2018)
+3.1. Seus dados de saúde são dados sensíveis e tratados com base no seu consentimento (art. 11).
+3.2. Os dados são criptografados em trânsito (HTTPS) e sensíveis são cifrados no servidor.
+3.3. Você pode, a qualquer momento: acessar, corrigir, exportar e solicitar a exclusão dos seus dados.
+3.4. A exclusão remove sua conta e agenda a eliminação definitiva dos dados em até 30 dias.
+3.5. Não vendemos nem compartilhamos seus dados com terceiros para fins de marketing.
+
+4. LIMITAÇÃO DE RESPONSABILIDADE
+4.1. As decisões sobre sua medicação, dose e tratamento devem ser sempre tomadas com seu médico.
+4.2. O aplicativo não se responsabiliza por decisões tomadas exclusivamente com base nos registros ou alertas exibidos.
+
+5. SEGURANÇA
+5.1. Mantenha sua senha em sigilo.
+5.2. Em caso de suspeita de acesso indevido, altere sua senha.
+
+6. ALTERAÇÕES
+Estes termos podem ser atualizados. Mudanças relevantes serão comunicadas no aplicativo.
+
+7. CONTATO
+Dúvidas sobre privacidade e seus direitos podem ser encaminhadas ao controlador dos dados pelo canal de suporte informado no aplicativo.
+
+Ao tocar em "Aceito", você declara ter lido e concordado com os Termos de Uso e a Política de Privacidade acima, e consente com o tratamento dos seus dados de saúde para a finalidade de acompanhamento de conformidade.
+''';
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      if (!_leuTudo &&
+          _scroll.position.pixels >=
+              _scroll.position.maxScrollExtent - 24) {
+        setState(() => _leuTudo = true);
+      }
+    });
+    // Conteúdo curto que não rola: libera após o primeiro frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients &&
+          _scroll.position.maxScrollExtent <= 0 &&
+          !_leuTudo) {
+        setState(() => _leuTudo = true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, _) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text('Termos de Uso e Privacidade',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                _leuTudo
+                    ? 'Você chegou ao fim. Escolha abaixo.'
+                    : 'Role até o final para habilitar a escolha.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const Divider(height: 20),
+              Expanded(
+                child: Scrollbar(
+                  controller: _scroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    child: const Text(_texto, style: TextStyle(fontSize: 13, height: 1.5)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Recusar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _leuTudo
+                          ? () => Navigator.of(context).pop(true)
+                          : null,
+                      child: const Text('Aceito'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
