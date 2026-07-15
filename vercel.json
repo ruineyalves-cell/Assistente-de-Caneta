@@ -1,0 +1,14 @@
+{
+  "buildCommand": "cd flutter_app && flutter build web --release",
+  "outputDirectory": "flutter_app/build/web",
+  "framework": "flutter",
+  "env": {
+    "API_BASE_URL": "@api_base_url"
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
