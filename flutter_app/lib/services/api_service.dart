@@ -141,7 +141,10 @@ class ApiService {
   Future<List<Map<String, dynamic>>> listarMedicacoes() async {
     try {
       final response = await _dio.get('/api/medicacoes');
-      return List<Map<String, dynamic>>.from(response.data as List);
+      // Backend responde { medicacoes: [...] }.
+      final data = response.data as Map<String, dynamic>;
+      return List<Map<String, dynamic>>.from(
+          (data['medicacoes'] as List?) ?? const []);
     } on DioException catch (e) {
       throw _parseError(e);
     }
@@ -171,13 +174,13 @@ class ApiService {
       final response = await _dio.put(
         '/api/pacientes/perfil',
         data: {
-          'medicacao_id': medicacaoId,
-          'dosagem': dosagem,
-          'peso_kg': pesoKg,
-          'altura_cm': alturaCm,
-          'meta_proteina_gkg': metaProteinaGkg,
-          'meta_agua_mlkg': metaAguaMlkg,
-          'declarou_prescricao': declarouPrescricao,
+          'medicationId': medicacaoId,
+          'doseAtual': dosagem,
+          'pesoInicialKg': pesoKg,
+          'alturaCm': alturaCm,
+          'metaProteinaGkg': metaProteinaGkg,
+          'metaAguaMlKg': metaAguaMlkg,
+          'declarouPrescricao': declarouPrescricao,
         },
       );
       return response.data as Map<String, dynamic>;
@@ -211,11 +214,11 @@ class ApiService {
         '/api/logs',
         data: {
           'data': data.toIso8601String().split('T')[0],
-          'peso_kg': pesoKg,
-          'proteina_g': proteinaG,
-          'agua_ml': aguaMl,
+          'pesoKg': pesoKg,
+          'proteinaG': proteinaG,
+          'aguaMl': aguaMl,
           'alimentos': alimentos,
-          'dose_aplicada': doseAplicada,
+          'doseAplicada': doseAplicada,
           'efeitos': efeitosColaterais,
         },
       );
@@ -231,14 +234,17 @@ class ApiService {
   }) async {
     try {
       final params = <String, dynamic>{};
-      if (de != null) params['de'] = de.toIso8601String().split('T')[0];
+      if (de != null) params['desde'] = de.toIso8601String().split('T')[0];
       if (ate != null) params['ate'] = ate.toIso8601String().split('T')[0];
 
       final response = await _dio.get(
         '/api/logs',
         queryParameters: params,
       );
-      return List<Map<String, dynamic>>.from(response.data as List);
+      // Backend responde { logs: [...] }.
+      final data = response.data as Map<String, dynamic>;
+      return List<Map<String, dynamic>>.from(
+          (data['logs'] as List?) ?? const []);
     } on DioException catch (e) {
       throw _parseError(e);
     }

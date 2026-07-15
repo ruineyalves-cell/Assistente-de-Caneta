@@ -1,62 +1,43 @@
 class Medication {
   final int id;
   final String nomeComercial;
-  final String nomePrincipioDivoAtivo;
-  final String dosagem;
-  final String viaAdministracao;
-  final String frequenciaRecomendada;
-  final double precoMedioUnitario;
-  final String cnpjFabricante;
-  final bool receituario;
-  final bool ativo;
-  final String? areaAtuacao;
+  final String? principioAtivo;
+  final String? fabricante;
+  final String? statusAnvisa;
+  final String? categoria;
+  final String? indicacoes;
+  final String? frequenciaPadrao;
+  final String? via;
 
   Medication({
     required this.id,
     required this.nomeComercial,
-    required this.nomePrincipioDivoAtivo,
-    required this.dosagem,
-    required this.viaAdministracao,
-    required this.frequenciaRecomendada,
-    required this.precoMedioUnitario,
-    required this.cnpjFabricante,
-    required this.receituario,
-    required this.ativo,
-    this.areaAtuacao,
+    this.principioAtivo,
+    this.fabricante,
+    this.statusAnvisa,
+    this.categoria,
+    this.indicacoes,
+    this.frequenciaPadrao,
+    this.via,
   });
 
+  /// Resposta do backend GET /api/medicacoes -> { medicacoes: [ {...} ] }
   factory Medication.fromJson(Map<String, dynamic> json) {
     return Medication(
-      id: json['id'] as int,
-      nomeComercial: json['nome_comercial'] as String,
-      nomePrincipioDivoAtivo: json['nome_principio_ativo'] as String,
-      dosagem: json['dosagem'] as String,
-      viaAdministracao: json['via_administracao'] as String,
-      frequenciaRecomendada: json['frequencia_recomendada'] as String,
-      precoMedioUnitario: (json['preco_medio_unitario'] as num).toDouble(),
-      cnpjFabricante: json['cnpj_fabricante'] as String,
-      receituario: json['receituario'] as bool,
-      ativo: json['ativo'] as bool? ?? true,
-      areaAtuacao: json['area_atuacao'] as String?,
+      id: (json['id'] as num).toInt(),
+      nomeComercial: (json['nome_comercial'] ?? '') as String,
+      principioAtivo: json['principio_ativo'] as String?,
+      fabricante: json['fabricante'] as String?,
+      statusAnvisa: json['status_anvisa'] as String?,
+      categoria: json['categoria'] as String?,
+      indicacoes: json['indicacoes'] as String?,
+      frequenciaPadrao: json['frequencia_padrao'] as String?,
+      via: json['via'] as String?,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'nome_comercial': nomeComercial,
-      'nome_principio_ativo': nomePrincipioDivoAtivo,
-      'dosagem': dosagem,
-      'via_administracao': viaAdministracao,
-      'frequencia_recomendada': frequenciaRecomendada,
-      'preco_medio_unitario': precoMedioUnitario,
-      'cnpj_fabricante': cnpjFabricante,
-      'receituario': receituario,
-      'ativo': ativo,
-      'area_atuacao': areaAtuacao,
-    };
-  }
+  bool get aprovada => statusAnvisa == 'aprovado';
 
   @override
-  String toString() => '$nomeComercial ($dosagem)';
+  String toString() => nomeComercial;
 }
