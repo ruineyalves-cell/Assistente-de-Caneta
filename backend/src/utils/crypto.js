@@ -9,11 +9,15 @@ const ALGO = 'aes-256-gcm';
 const IV_BYTES = 12;
 
 function getKey() {
-  const hex = process.env.DATA_ENCRYPTION_KEY;
-  if (!hex || hex.length !== 64) {
-    throw new Error('DATA_ENCRYPTION_KEY ausente ou inválida (esperado 64 chars hex). Rode: npm run gen:keys');
+  const raw = process.env.DATA_ENCRYPTION_KEY;
+  if (!raw) {
+    throw new Error('DATA_ENCRYPTION_KEY ausente. Configure a variável de ambiente.');
   }
-  return Buffer.from(hex, 'hex');
+  // Aceita uma chave hex de 32 bytes (64 chars) diretamente; caso contrário,
+  // deriva deterministicamente 32 bytes via SHA-256 de qualquer segredo
+  // (permite que o provedor gere o valor sem exigir formato hex específico).
+  if (/^[0-9a-fA-F]{64}$/.test(raw)) return Buffer.from(raw, 'hex');
+  return crypto.createHash('sha256').update(raw).digest();
 }
 
 function encryptField(plaintext) {

@@ -1,5 +1,5 @@
 class DailyLog {
-  final int? id;
+  final String? id;
   final DateTime data;
   final double? pesoKg;
   final int? proteinaG;
@@ -23,7 +23,7 @@ class DailyLog {
   /// { id, data, pesoKg, proteinaG, aguaMl, alimentos, doseAplicada, efeitos }
   factory DailyLog.fromJson(Map<String, dynamic> json) {
     return DailyLog(
-      id: (json['id'] as num?)?.toInt(),
+      id: json['id']?.toString(),
       data: DateTime.parse(json['data'] as String),
       pesoKg: (json['pesoKg'] as num?)?.toDouble(),
       proteinaG: (json['proteinaG'] as num?)?.toInt(),
