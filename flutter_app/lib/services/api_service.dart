@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000'; // Dev
-  // static const String baseUrl = 'https://api.assistente-caneta.com'; // Prod
+  // Backend de produção (Render). O plano gratuito "hiberna": a primeira
+  // requisição após inatividade pode levar até ~60s para responder.
+  static const String baseUrl =
+      'https://assistente-caneta-backend-tkl7.onrender.com';
 
   late Dio _dio;
   String? _accessToken;
@@ -12,8 +14,9 @@ class ApiService {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 70),
+        receiveTimeout: const Duration(seconds: 70),
+        sendTimeout: const Duration(seconds: 70),
         contentType: Headers.jsonContentType,
       ),
     );
