@@ -1,44 +1,25 @@
 class ComplianceScore {
-  final int? id;
-  final int patientId;
   final DateTime data;
   final int score; // 0-100
-  final Map<String, dynamic> componentes; // {protein%: 80, hydration%: 90, registration%: 100}
-  final List<String> alertas;
-  final DateTime criado_em;
+  final Map<String, dynamic> componentes; // {proteina, hidratacao, registro} (0-100 ou null)
+  final List<dynamic> alertas;
 
   ComplianceScore({
-    this.id,
-    required this.patientId,
     required this.data,
     required this.score,
     required this.componentes,
     required this.alertas,
-    required this.criado_em,
   });
 
+  /// Resposta do backend (dailyLogModel.scores):
+  /// { data: 'YYYY-MM-DD', score: int, componentes: {...}, alertas: [...] }
   factory ComplianceScore.fromJson(Map<String, dynamic> json) {
     return ComplianceScore(
-      id: json['id'] as int?,
-      patientId: json['patient_id'] as int,
       data: DateTime.parse(json['data'] as String),
-      score: json['score'] as int,
+      score: (json['score'] as num?)?.toInt() ?? 0,
       componentes: Map<String, dynamic>.from(json['componentes'] as Map? ?? {}),
-      alertas: List<String>.from(json['alertas'] as List? ?? []),
-      criado_em: DateTime.parse(json['criado_em'] as String),
+      alertas: (json['alertas'] as List?) ?? const [],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'patient_id': patientId,
-      'data': data.toIso8601String(),
-      'score': score,
-      'componentes': componentes,
-      'alertas': alertas,
-      'criado_em': criado_em.toIso8601String(),
-    };
   }
 
   String get scoreLabel {
@@ -49,17 +30,22 @@ class ComplianceScore {
     return 'Crítico 🚨';
   }
 
+  int? get _proteina => (componentes['proteina'] as num?)?.toInt();
+  int? get _hidratacao => (componentes['hidratacao'] as num?)?.toInt();
+
   String get proteinStatus {
-    final proteinPercent = (componentes['protein%'] as num?)?.toInt() ?? 0;
-    if (proteinPercent >= 90) return '✅ Proteína OK';
-    if (proteinPercent >= 70) return '⚠️ Proteína baixa';
+    final p = _proteina;
+    if (p == null) return 'Proteína — sem dado';
+    if (p >= 90) return '✅ Proteína OK';
+    if (p >= 70) return '⚠️ Proteína baixa';
     return '❌ Proteína crítica';
   }
 
   String get hydrationStatus {
-    final hydrationPercent = (componentes['hydration%'] as num?)?.toInt() ?? 0;
-    if (hydrationPercent >= 90) return '✅ Hidratação OK';
-    if (hydrationPercent >= 70) return '⚠️ Hidratação baixa';
+    final h = _hidratacao;
+    if (h == null) return 'Hidratação — sem dado';
+    if (h >= 90) return '✅ Hidratação OK';
+    if (h >= 70) return '⚠️ Hidratação baixa';
     return '❌ Hidratação crítica';
   }
 }

@@ -30,14 +30,18 @@ class LogsProvider extends ChangeNotifier {
 
       final response = await _apiService.dashboardLogs();
 
-      _streak = response['streak'] as int? ?? 0;
-      _scoreToday = response['score_hoje'] as int? ?? 0;
+      _streak = (response['streak'] as num?)?.toInt() ?? 0;
 
-      if (response['scores_28_dias'] is List) {
-        _scores = (response['scores_28_dias'] as List)
+      if (response['scores28dias'] is List) {
+        _scores = (response['scores28dias'] as List)
             .map((s) => ComplianceScore.fromJson(s as Map<String, dynamic>))
             .toList();
+      } else {
+        _scores = [];
       }
+
+      // Score de hoje = score mais recente (a lista vem ordenada desc).
+      _scoreToday = _scores.isNotEmpty ? _scores.first.score : 0;
 
       _isLoading = false;
       notifyListeners();

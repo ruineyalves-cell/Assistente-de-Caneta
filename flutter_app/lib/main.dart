@@ -721,14 +721,14 @@ class _LogDailyPageState extends State<LogDailyPage> {
 
       await logsProvider.adicionarLog(
         data: DateTime.now(),
-        pesoKg: pesoController.text.isNotEmpty
-            ? double.parse(pesoController.text)
+        pesoKg: pesoController.text.trim().isNotEmpty
+            ? double.tryParse(pesoController.text.trim().replaceAll(',', '.'))
             : null,
-        proteinaG: proteinaController.text.isNotEmpty
-            ? int.parse(proteinaController.text)
+        proteinaG: proteinaController.text.trim().isNotEmpty
+            ? int.tryParse(proteinaController.text.trim())
             : null,
-        aguaMl: aguaController.text.isNotEmpty
-            ? int.parse(aguaController.text)
+        aguaMl: aguaController.text.trim().isNotEmpty
+            ? int.tryParse(aguaController.text.trim())
             : null,
         alimentos: alimentosController.text.isEmpty
             ? null
