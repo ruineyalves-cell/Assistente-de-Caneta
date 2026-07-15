@@ -8,6 +8,9 @@ on:
       - '.github/workflows/build-android-apk.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,3 +56,13 @@ jobs:
           name: android-apk
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Publish APK to Release (direct download link)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Assistente de Caneta — APK (beta)
+          body: |
+            APK de teste do Assistente de Caneta.
+            Baixe o arquivo `app-release.apk` abaixo direto no celular Android e instale.
+          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
