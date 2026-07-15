@@ -1,7 +1,7 @@
 class AppConstants {
   // API
-  static const String apiBaseUrl = 'http://localhost:3000'; // Dev
-  // static const String apiBaseUrl = 'https://api.assistente-caneta.com'; // Prod
+  // static const String apiBaseUrl = 'http://localhost:3000'; // Dev
+  static const String apiBaseUrl = 'https://assistente-caneta-backend.onrender.com'; // Prod
 
   // Strings
   static const String appName = 'Assistente de Caneta';
