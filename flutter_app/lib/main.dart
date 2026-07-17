@@ -14,6 +14,8 @@ import 'widgets/metric_chart.dart';
 import 'widgets/recomposition_card.dart';
 import 'widgets/macros_card.dart';
 import 'widgets/effort_preview_card.dart';
+import 'package:camera/camera.dart' show XFile;
+import 'screens/camera_scanner_screen.dart';
 import 'screens/effort_screen.dart';
 import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
@@ -936,6 +938,8 @@ class _HomePageState extends State<HomePage> {
                   consumidoAguaMl: consumidoAguaMl,
                 ),
                 const SizedBox(height: 16),
+                _ScanRefeicaoButton(),
+                const SizedBox(height: 16),
                 EffortPreviewCard(
                   eixo: _eixo,
                   onAbrir: () => Navigator.of(context).push(
@@ -1022,6 +1026,48 @@ class _HomePageState extends State<HomePage> {
 
 /// Card de destaque com o foco do dia — texto fixo "BLINDAGEM MUSCULAR"
 /// e o eixo farmacológico atual do perfil (ou CTA quando não configurado).
+/// Botão que abre a CameraScannerScreen e mostra um snackbar confirmando
+/// a captura. A análise por IA em si fica para lote futuro — este lote
+/// só entrega o pipeline câmera → foto.
+class _ScanRefeicaoButton extends StatelessWidget {
+  Future<void> _abrir(BuildContext context) async {
+    final foto = await Navigator.of(context).push<XFile?>(
+      MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
+    );
+    if (foto != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto capturada: ${foto.name}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: () => _abrir(context),
+        icon: const Icon(Icons.camera_alt_outlined),
+        label: const Text(
+          'Escanear refeição com IA',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.azulClinico,
+          side: const BorderSide(color: AppColors.azulClinico, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FocoDoDia extends StatelessWidget {
   final EixoFarmacologico? eixo;
   const _FocoDoDia({required this.eixo});
