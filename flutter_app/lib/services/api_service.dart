@@ -161,28 +161,29 @@ class ApiService {
 
   // ========== PERFIL PACIENTE ==========
 
+  /// Salva/atualiza o perfil do paciente. Todos os campos são opcionais,
+  /// exceto [declarouPrescricao] (o backend rejeita com 403 se `false`
+  /// junto de dados de medicação). Envia apenas as chaves não-nulas para
+  /// que o backend preserve valores anteriores via COALESCE.
   Future<Map<String, dynamic>> salvarPerfil({
-    required int medicacaoId,
-    required String dosagem,
-    required double pesoKg,
-    required int alturaCm,
-    required double metaProteinaGkg,
-    required double metaAguaMlkg,
     required bool declarouPrescricao,
+    int? medicacaoId,
+    String? dosagem,
+    double? pesoKg,
+    int? alturaCm,
+    double? metaProteinaGkg,
+    double? metaAguaMlkg,
   }) async {
     try {
-      final response = await _dio.put(
-        '/api/pacientes/perfil',
-        data: {
-          'medicationId': medicacaoId,
-          'doseAtual': dosagem,
-          'pesoInicialKg': pesoKg,
-          'alturaCm': alturaCm,
-          'metaProteinaGkg': metaProteinaGkg,
-          'metaAguaMlKg': metaAguaMlkg,
-          'declarouPrescricao': declarouPrescricao,
-        },
-      );
+      final data = <String, dynamic>{'declarouPrescricao': declarouPrescricao};
+      if (medicacaoId != null) data['medicationId'] = medicacaoId;
+      if (dosagem != null) data['doseAtual'] = dosagem;
+      if (pesoKg != null) data['pesoInicialKg'] = pesoKg;
+      if (alturaCm != null) data['alturaCm'] = alturaCm;
+      if (metaProteinaGkg != null) data['metaProteinaGkg'] = metaProteinaGkg;
+      if (metaAguaMlkg != null) data['metaAguaMlKg'] = metaAguaMlkg;
+
+      final response = await _dio.put('/api/pacientes/perfil', data: data);
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _parseError(e);
