@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../utils/constants.dart';
 
 class MetricChart extends StatelessWidget {
   final List<int> scores; // últimos 7-28 dias
@@ -106,7 +107,7 @@ class MetricChart extends StatelessWidget {
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      color: Colors.deepPurple,
+                      color: AppColors.azulClinico,
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: FlDotData(
@@ -114,7 +115,7 @@ class MetricChart extends StatelessWidget {
                         getDotPainter: (spot, percent, barData, index) {
                           return FlDotCirclePainter(
                             radius: 4,
-                            color: Colors.deepPurple,
+                            color: AppColors.azulClinico,
                             strokeWidth: 2,
                             strokeColor: Colors.white,
                           );
@@ -122,7 +123,7 @@ class MetricChart extends StatelessWidget {
                       ),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Colors.deepPurple.withOpacity(0.1),
+                        color: AppColors.azulClinico.withOpacity(0.1),
                       ),
                     ),
                   ],
