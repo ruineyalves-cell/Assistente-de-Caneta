@@ -62,8 +62,15 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: widget.authService),
-        ProxyProvider<AuthService, LogsProvider>(
-          update: (_, authService, __) => LogsProvider(authService.apiService),
+        // LogsProvider é um ChangeNotifier — precisa ser exposto via
+        // ChangeNotifierProxyProvider para que os widgets escutem
+        // notifyListeners(). Reaproveita a instância entre rebuilds e só
+        // recria se o ApiService (do AuthService) mudar de identidade.
+        ChangeNotifierProxyProvider<AuthService, LogsProvider>(
+          create: (context) =>
+              LogsProvider(context.read<AuthService>().apiService),
+          update: (_, authService, previous) =>
+              previous ?? LogsProvider(authService.apiService),
         ),
       ],
       child: MaterialApp(
