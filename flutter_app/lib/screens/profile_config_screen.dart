@@ -184,6 +184,152 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
     }
   }
 
+  /// Monta os filhos da seção "Terapia farmacológica" (Lote 16): eixo →
+  /// medicação (filtrada) → dose → última dose → declaração. Se o eixo
+  /// for "Recomposição Natural" ou não tiver categoria mapeada, esconde
+  /// os campos de medicação para não confundir.
+  List<Widget> _construirTerapiaFarmacologica() {
+    final categorias = _eixo?.categoriasAceitas ?? const <String>[];
+    final medicacoesFiltradas = categorias.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : _medicacoes.where((m) {
+            final c = m['categoria']?.toString();
+            return c != null && categorias.contains(c);
+          }).toList();
+
+    // Se a medicação atualmente selecionada não está entre as filtradas
+    // (ex: usuário mudou o eixo), removemos silenciosamente para evitar
+    // dropdown com valor "fantasma".
+    if (_medicacaoIdSelecionada != null &&
+        !medicacoesFiltradas.any((m) => m['id'] == _medicacaoIdSelecionada)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _medicacaoIdSelecionada = null);
+      });
+    }
+
+    final semFarma = _eixo == EixoFarmacologico.recomposicaoNatural;
+
+    return [
+      // 1) Eixo
+      DropdownButtonFormField<EixoFarmacologico>(
+        value: _eixo,
+        decoration: const InputDecoration(
+          labelText: 'Eixo farmacológico',
+          prefixIcon: Icon(Icons.science_outlined),
+        ),
+        items: EixoFarmacologico.values
+            .map((e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e.label, overflow: TextOverflow.ellipsis),
+                ))
+            .toList(),
+        onChanged: (v) => setState(() => _eixo = v),
+      ),
+
+      // 2) Medicação (só aparece se o eixo envolve farmacologia)
+      if (!semFarma) ...[
+        const SizedBox(height: 12),
+        if (categorias.isEmpty)
+          _AvisoInline(
+            texto:
+                'Sem medicações aprovadas no catálogo Anvisa para esse eixo '
+                'nesta versão do app. Se surgir uma opção, adicionaremos.',
+          )
+        else
+          DropdownButtonFormField<int?>(
+            value: _medicacaoIdSelecionada,
+            decoration: const InputDecoration(
+              labelText: 'Medicação',
+              prefixIcon: Icon(Icons.medication_outlined),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(
+                value: null,
+                child: Text('Nenhuma'),
+              ),
+              ...medicacoesFiltradas.map((m) {
+                final id = m['id'] as int?;
+                final nome = (m['nome_comercial'] ?? m['nome']) as String?;
+                final fab = m['fabricante']?.toString();
+                final rotulo = (nome != null && fab != null && fab.isNotEmpty)
+                    ? '$nome · $fab'
+                    : (nome ?? '—');
+                return DropdownMenuItem<int?>(
+                  value: id,
+                  child: Text(rotulo, overflow: TextOverflow.ellipsis),
+                );
+              }),
+            ],
+            onChanged: (v) => setState(() => _medicacaoIdSelecionada = v),
+          ),
+
+        // 3) Dose
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _doseCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Dose atual',
+            hintText: 'ex.: 10mg semanal',
+            prefixIcon: Icon(Icons.medication_liquid_outlined),
+          ),
+        ),
+
+        // 4) Data da última dose
+        const SizedBox(height: 12),
+        InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Data da última dose',
+            prefixIcon: Icon(Icons.event_outlined),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _ultimaDose != null
+                      ? DateFormat('dd/MM/yyyy', 'pt_BR').format(_ultimaDose!)
+                      : 'Não informada',
+                ),
+              ),
+              if (_ultimaDose != null)
+                IconButton(
+                  tooltip: 'Remover data',
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() => _ultimaDose = null),
+                ),
+              TextButton.icon(
+                icon: const Icon(Icons.edit_calendar),
+                label: const Text('Escolher'),
+                onPressed: _pickUltimaDose,
+              ),
+            ],
+          ),
+        ),
+
+        // 5) Declaração de prescrição
+        const SizedBox(height: 4),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _declarouPrescricao,
+          onChanged: (v) => setState(() => _declarouPrescricao = v ?? false),
+          title: const Text(
+            'Declaro que possuo prescrição médica válida para esta medicação '
+            '(exigido para salvar dados farmacológicos — Termos §3.1).',
+            style: TextStyle(fontSize: 12.5, height: 1.35),
+          ),
+          activeColor: AppColors.verdeConfirma,
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+      ] else ...[
+        const SizedBox(height: 8),
+        _AvisoInline(
+          texto:
+              'Recomposição Natural — o app não pede dados de medicação; '
+              'o foco fica em peso, alimentação e atividade.',
+        ),
+      ],
+    ];
+  }
+
   Future<void> _pickUltimaDose() async {
     final agora = DateTime.now();
     final escolhida = await showDatePicker(
@@ -281,115 +427,11 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
             ),
 
             _Secao(
-              titulo: 'Eixo farmacológico',
+              titulo: 'Terapia farmacológica',
               subtitulo:
-                  'Define a matriz metabólica que o dashboard vai usar para '
-                  'orientar suas metas.',
-              filhos: [
-                DropdownButtonFormField<EixoFarmacologico>(
-                  value: _eixo,
-                  decoration: const InputDecoration(
-                    labelText: 'Eixo',
-                    prefixIcon: Icon(Icons.science_outlined),
-                  ),
-                  items: EixoFarmacologico.values
-                      .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(e.label,
-                                overflow: TextOverflow.ellipsis),
-                          ))
-                      .toList(),
-                  onChanged: (v) => setState(() => _eixo = v),
-                ),
-                if (_eixo?.envolveMedicacao ?? false) ...[
-                  const SizedBox(height: 12),
-                  InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Data da última dose',
-                      prefixIcon: Icon(Icons.event_outlined),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _ultimaDose != null
-                                ? DateFormat('dd/MM/yyyy', 'pt_BR')
-                                    .format(_ultimaDose!)
-                                : 'Não informada',
-                          ),
-                        ),
-                        if (_ultimaDose != null)
-                          IconButton(
-                            tooltip: 'Remover data',
-                            icon: const Icon(Icons.close, size: 18),
-                            onPressed: () =>
-                                setState(() => _ultimaDose = null),
-                          ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.edit_calendar),
-                          label: const Text('Escolher'),
-                          onPressed: _pickUltimaDose,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-
-            _Secao(
-              titulo: 'Medicação em uso',
-              subtitulo:
-                  'Você deve declarar que possui prescrição médica para '
-                  'salvar dados da sua medicação (Termos §3.1).',
-              filhos: [
-                DropdownButtonFormField<int?>(
-                  value: _medicacaoIdSelecionada,
-                  decoration: const InputDecoration(
-                    labelText: 'Medicação',
-                    prefixIcon: Icon(Icons.medication_outlined),
-                  ),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('Nenhuma'),
-                    ),
-                    ..._medicacoes.map((m) {
-                      final id = m['id'] as int?;
-                      final nome = (m['nome_comercial'] ?? m['nome']) as String?;
-                      return DropdownMenuItem<int?>(
-                        value: id,
-                        child: Text(nome ?? '—'),
-                      );
-                    }),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _medicacaoIdSelecionada = v),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _doseCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Dose atual',
-                    hintText: 'ex.: 10mg semanal',
-                    prefixIcon: Icon(Icons.medication_liquid_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _declarouPrescricao,
-                  onChanged: (v) =>
-                      setState(() => _declarouPrescricao = v ?? false),
-                  title: const Text(
-                    'Declaro que possuo prescrição médica válida para esta '
-                    'medicação.',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  activeColor: AppColors.verdeConfirma,
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-              ],
+                  'O eixo define sua matriz metabólica; a medicação é '
+                  'filtrada automaticamente pela compatibilidade com o eixo.',
+              filhos: _construirTerapiaFarmacologica(),
             ),
 
             if (_mensagemSalvamento != null) ...[
@@ -573,6 +615,39 @@ class _DropdownSexo extends StatelessWidget {
           .map((s) => DropdownMenuItem(value: s, child: Text(s.label)))
           .toList(),
       onChanged: onChanged,
+    );
+  }
+}
+
+/// Caixa de aviso inline usada dentro da seção "Terapia farmacológica"
+/// para explicar situações onde não há medicação disponível (miostatina,
+/// natural, triplo agonista sem droga aprovada).
+class _AvisoInline extends StatelessWidget {
+  final String texto;
+  const _AvisoInline({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              texto,
+              style: TextStyle(
+                  fontSize: 12, height: 1.4, color: Colors.grey.shade700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
