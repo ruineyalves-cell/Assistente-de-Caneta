@@ -54,8 +54,8 @@ dependencies:
   home_widget: ^0.9.3
 
   # Notificações locais acolhedoras (Lote 19).
-  # Combo conservador testado com Flutter 3.44 + compileSdk 36.
-  flutter_local_notifications: ^17.2.4
+  # flutter_local_notifications removido temporariamente por AAR metadata
+  # incompatível — bisecting p/ identificar qual dep quebra o build.
   timezone: ^0.9.4
   permission_handler: ^11.2.0
 
