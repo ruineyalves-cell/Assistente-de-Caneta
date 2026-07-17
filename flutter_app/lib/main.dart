@@ -1427,7 +1427,9 @@ class _HistoryPageState extends State<HistoryPage> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          // Espaço no fim para a FloatingNavBar (Lote 14) não cobrir o
+          // último card do histórico.
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           itemCount: logsProvider.logs.length,
           itemBuilder: (context, index) {
             final log = logsProvider.logs[index];

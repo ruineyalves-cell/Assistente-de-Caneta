@@ -358,7 +358,10 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      // padding-bottom 96 dá espaço para a FloatingNavBar (Lote 14) que
+      // fica sobre o conteúdo via extendBody — o botão "Gerar Matriz
+      // Metabólica" precisa desse espaço para não ficar coberto.
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       child: Form(
         key: _formKey,
         child: Column(
