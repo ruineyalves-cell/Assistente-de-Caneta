@@ -15,6 +15,8 @@ import 'widgets/recomposition_card.dart';
 import 'widgets/macros_card.dart';
 import 'widgets/effort_preview_card.dart';
 import 'widgets/floating_nav_bar.dart';
+import 'services/greeting_service.dart';
+import 'services/daily_tip_service.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -820,6 +822,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   EixoFarmacologico? _eixo;
+  IdentidadeGenero? _genero;
   PerfilBackend? _perfil;
   bool _contextoCarregado = false;
 
@@ -839,6 +842,12 @@ class _HomePageState extends State<HomePage> {
         : EixoFarmacologico.values
             .cast<EixoFarmacologico?>()
             .firstWhere((v) => v?.name == nome, orElse: () => null);
+    final nomeGen = prefs.getString(ProfilePrefsKeys.identidadeGenero);
+    final genero = nomeGen == null
+        ? null
+        : IdentidadeGenero.values
+            .cast<IdentidadeGenero?>()
+            .firstWhere((v) => v?.name == nomeGen, orElse: () => null);
 
     PerfilBackend? perfil;
     try {
@@ -855,6 +864,7 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     setState(() {
       _eixo = eixo;
+      _genero = genero;
       _perfil = perfil;
       _contextoCarregado = true;
     });
@@ -924,13 +934,13 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1) Saudação personalizada — preenchida pelo Lote 15;
-                //    por ora, um placeholder simples com o nome.
-                _SaudacaoPlaceholder(),
+                // 1) Saudação personalizada — hora do dia + primeiro nome +
+                //    concordância de gênero.
+                _SaudacaoHumana(genero: _genero),
                 const SizedBox(height: 12),
-                // 2) Dica do dia — sobe do fim para a primeira dobra.
-                //    Conteúdo humanizado / gênero-aware entra no Lote 15.
-                _DicaDoDiaPlaceholder(),
+                // 2) Dica do dia — pool com concordância de gênero,
+                //    determinística por data.
+                _DicaDoDiaHumana(genero: _genero),
                 const SizedBox(height: 16),
                 // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
@@ -1026,36 +1036,46 @@ class _HomePageState extends State<HomePage> {
 
 /// Card de destaque com o foco do dia — texto fixo "BLINDAGEM MUSCULAR"
 /// e o eixo farmacológico atual do perfil (ou CTA quando não configurado).
-/// Saudação simples com o nome do usuário — placeholder do Lote 14.
-/// O Lote 15 substitui por saudação humanizada / gênero-aware.
-class _SaudacaoPlaceholder extends StatelessWidget {
+/// Saudação humanizada — hora do dia + primeiro nome + concordância
+/// com o gênero. Conteúdo em `services/greeting_service.dart`.
+class _SaudacaoHumana extends StatelessWidget {
+  final IdentidadeGenero? genero;
+  const _SaudacaoHumana({required this.genero});
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final primeiroNome = (auth.nome ?? '').split(' ').first;
-    final ola = primeiroNome.isEmpty ? 'Olá!' : 'Olá, $primeiroNome!';
+    final saudacao = const GreetingService().gerar(
+      nomeCompleto: auth.nome,
+      genero: genero,
+    );
     return Padding(
       padding: const EdgeInsets.only(left: 4, right: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(ola,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 2),
-          Text('Aqui é o seu espaço de acompanhamento.',
+          Text(saudacao.titulo,
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(saudacao.subtitulo,
               style: TextStyle(
-                  fontSize: 13, color: Colors.grey.shade700, height: 1.35)),
+                  fontSize: 13, color: Colors.grey.shade700, height: 1.4)),
         ],
       ),
     );
   }
 }
 
-/// Dica do dia — placeholder estático até o Lote 15 plugar o service
-/// com pool e concordância de gênero.
-class _DicaDoDiaPlaceholder extends StatelessWidget {
+/// Dica do dia — usa o pool humanizado com concordância de gênero e
+/// sorteio determinístico por data.
+class _DicaDoDiaHumana extends StatelessWidget {
+  final IdentidadeGenero? genero;
+  const _DicaDoDiaHumana({required this.genero});
+
   @override
   Widget build(BuildContext context) {
+    final dica = const DailyTipService().dicaDoDia(genero: genero);
     return Card(
       elevation: 0,
       color: AppColors.verdeConfirma.withValues(alpha: 0.10),
@@ -1068,24 +1088,22 @@ class _DicaDoDiaPlaceholder extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('💡', style: TextStyle(fontSize: 22)),
+            Text(dica.categoria.emoji, style: const TextStyle(fontSize: 22)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Dica do dia',
-                      style: TextStyle(
+                  Text(dica.categoria.rotulo.toUpperCase(),
+                      style: const TextStyle(
                           fontSize: 11,
                           letterSpacing: 1.4,
                           fontWeight: FontWeight.w700,
                           color: AppColors.verdeConfirma)),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Blindagem muscular começa no prato: priorize proteína '
-                    'de alto valor biológico em cada refeição e hidrate-se '
-                    'ao longo do dia. 💪🌊',
-                    style: TextStyle(fontSize: 13, height: 1.4),
+                  Text(
+                    dica.texto,
+                    style: const TextStyle(fontSize: 13, height: 1.4),
                   ),
                 ],
               ),
