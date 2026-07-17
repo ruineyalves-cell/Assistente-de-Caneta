@@ -1,60 +1,75 @@
 import 'dart:async';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter/material.dart' show Color;
 
-/// Fachada única de notificações locais acolhedoras da Recorpo (Lote 19).
+/// Fachada de notificações locais acolhedoras da Recorpo (Lote 19).
 ///
-/// Categorias:
-///  · **Hidratação** — 18h se ainda faltar água pra bater a meta.
-///  · **Registro do dia** — 22h se o dia ficou sem log algum.
-///  · **Celebração de streak** — imediata quando o app abre e o streak
-///    é múltiplo de 3, 7 ou 30.
-///  · **Próxima dose** — se última dose + frequência do medicamento
-///    fica próximo do dia atual.
+/// Usa `awesome_notifications` no lugar de `flutter_local_notifications`
+/// (a linha inteira do outro package tem armadilhas de build em Flutter
+/// 3.44 + compileSdk 36 — v<=16 falha `bigLargeIcon` ambíguo, v>=17
+/// falha AAR metadata).
 ///
-/// Todas as frases usam o primeiro nome do usuário. Tom acolhedor —
-/// nunca passivo-agressivo (o app é clínico, não é um jogo).
+/// Todas as frases usam o primeiro nome; tom acolhedor, nunca
+/// passivo-agressivo (o app é clínico, não é jogo de idioma).
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  static final NotificationService _instance = NotificationService._();
+  factory NotificationService() => _instance;
+  NotificationService._();
+
   bool _inicializado = false;
 
-  static const _canalDiarioId = 'recorpo_diario';
-  static const _canalDiarioNome = 'Lembretes diários';
-  static const _canalCelebracaoId = 'recorpo_celebracao';
-  static const _canalCelebracaoNome = 'Celebrações';
-  static const _canalDoseId = 'recorpo_dose';
-  static const _canalDoseNome = 'Próxima aplicação';
+  static const _canalDiario = 'recorpo_diario';
+  static const _canalCelebracao = 'recorpo_celebracao';
+  static const _canalDose = 'recorpo_dose';
+
+  static const int _idHidratacao = 1001;
+  static const int _idRegistroDia = 1002;
+  static const int _idCelebracao = 1003;
+  static const int _idProximaDose = 1004;
 
   bool get suportado => !kIsWeb;
 
   Future<void> inicializar() async {
     if (!suportado || _inicializado) return;
-    tz.initializeTimeZones();
-    const init = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    await AwesomeNotifications().initialize(
+      null, // usa o ic_launcher do app
+      [
+        NotificationChannel(
+          channelKey: _canalDiario,
+          channelName: 'Lembretes diários',
+          channelDescription: 'Hidratação e registro do dia',
+          defaultColor: const Color(0xFF2B6CB0),
+          importance: NotificationImportance.High,
+        ),
+        NotificationChannel(
+          channelKey: _canalCelebracao,
+          channelName: 'Celebrações',
+          channelDescription: 'Marcos de streak e mensagens motivacionais',
+          defaultColor: const Color(0xFF48BB78),
+          importance: NotificationImportance.High,
+        ),
+        NotificationChannel(
+          channelKey: _canalDose,
+          channelName: 'Próxima aplicação',
+          channelDescription: 'Alerta antes da próxima dose da medicação',
+          defaultColor: const Color(0xFFE53E3E),
+          importance: NotificationImportance.Max,
+        ),
+      ],
+      debug: false,
     );
-    await _plugin.initialize(init);
     _inicializado = true;
   }
 
-  /// Pede permissão POST_NOTIFICATIONS (Android 13+) e SCHEDULE_EXACT_ALARM
-  /// (Android 12+). Retorna true se pelo menos POST_NOTIFICATIONS foi
-  /// concedida.
   Future<bool> pedirPermissao() async {
     if (!suportado) return false;
-    final noti = await Permission.notification.request();
-    try {
-      await Permission.scheduleExactAlarm.request();
-    } catch (_) {}
-    return noti.isGranted;
+    await inicializar();
+    final allowed = await AwesomeNotifications().isNotificationAllowed();
+    if (allowed) return true;
+    return AwesomeNotifications().requestPermissionToSendNotifications();
   }
 
-  /// Cancela e re-agenda as notificações diárias com base no estado
-  /// atual do usuário. Idempotente.
   Future<void> reagendarDiarias({
     required String? primeiroNome,
     required bool hidratacaoAbaixoDaMeta,
@@ -62,39 +77,53 @@ class NotificationService {
   }) async {
     if (!suportado) return;
     await inicializar();
-    await cancelarDiarias();
+    await AwesomeNotifications().cancel(_idHidratacao);
+    await AwesomeNotifications().cancel(_idRegistroDia);
 
     final nome = _saudarNome(primeiroNome);
 
     if (hidratacaoAbaixoDaMeta) {
-      await _agendarHoje(
-        id: _idHidratacao,
-        hora: 18,
-        minuto: 0,
-        canalId: _canalDiarioId,
-        canalNome: _canalDiarioNome,
-        titulo: 'Ainda dá tempo de bater sua meta de hoje 💧',
-        corpo: '$nome, um bom copo de água agora te aproxima da meta do dia.',
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: _idHidratacao,
+          channelKey: _canalDiario,
+          title: 'Ainda dá tempo de bater sua meta de hoje 💧',
+          body: '$nome, um bom copo de água agora te aproxima da meta do dia.',
+          notificationLayout: NotificationLayout.Default,
+        ),
+        schedule: NotificationCalendar(
+          hour: 18,
+          minute: 0,
+          second: 0,
+          repeats: true,
+          allowWhileIdle: true,
+          preciseAlarm: true,
+        ),
       );
     }
 
     if (!jaTeveLogHoje) {
-      await _agendarHoje(
-        id: _idRegistroDia,
-        hora: 22,
-        minuto: 0,
-        canalId: _canalDiarioId,
-        canalNome: _canalDiarioNome,
-        titulo: 'Como foi o dia?',
-        corpo:
-            '$nome, um registro rápido antes de dormir fecha o ciclo com carinho.',
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: _idRegistroDia,
+          channelKey: _canalDiario,
+          title: 'Como foi o dia?',
+          body:
+              '$nome, um registro rápido antes de dormir fecha o ciclo com carinho.',
+          notificationLayout: NotificationLayout.Default,
+        ),
+        schedule: NotificationCalendar(
+          hour: 22,
+          minute: 0,
+          second: 0,
+          repeats: true,
+          allowWhileIdle: true,
+          preciseAlarm: true,
+        ),
       );
     }
   }
 
-  /// Notificação imediata de celebração ou motivação. [streakDias] usado
-  /// para escolher marco de streak (múltiplo de 3/7/30) ou rotacionar
-  /// entre frases motivacionais.
   Future<void> celebrar({
     required String? primeiroNome,
     required int streakDias,
@@ -124,23 +153,17 @@ class NotificationService {
       corpo = entry.$2.replaceAll('{nome}', nome);
     }
 
-    await _plugin.show(
-      _idCelebracao,
-      titulo,
-      corpo,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _canalCelebracaoId,
-          _canalCelebracaoNome,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idCelebracao,
+        channelKey: _canalCelebracao,
+        title: titulo,
+        body: corpo,
+        notificationLayout: NotificationLayout.Default,
       ),
     );
   }
 
-  /// Agenda notificação de próxima aplicação. Se [proximaDose] for null
-  /// ou já passou, cancela.
   Future<void> agendarProximaDose({
     required String? primeiroNome,
     required String? medicamento,
@@ -148,76 +171,37 @@ class NotificationService {
   }) async {
     if (!suportado) return;
     await inicializar();
-    await _plugin.cancel(_idProximaDose);
+    await AwesomeNotifications().cancel(_idProximaDose);
     if (proximaDose == null || proximaDose.isBefore(DateTime.now())) return;
 
     final nome = _saudarNome(primeiroNome);
     final med = medicamento ?? 'sua aplicação';
-    final quando = tz.TZDateTime.from(proximaDose, tz.local);
 
-    await _plugin.zonedSchedule(
-      _idProximaDose,
-      'Aplicação próxima',
-      '$nome, sua próxima dose de $med está chegando. Prepare-se com calma.',
-      quando,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _canalDoseId,
-          _canalDoseNome,
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idProximaDose,
+        channelKey: _canalDose,
+        title: 'Aplicação próxima',
+        body: '$nome, sua próxima dose de $med está chegando. Prepare-se com calma.',
+        notificationLayout: NotificationLayout.Default,
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      schedule: NotificationCalendar.fromDate(
+        date: proximaDose,
+        allowWhileIdle: true,
+        preciseAlarm: true,
+      ),
     );
   }
 
   Future<void> cancelarDiarias() async {
     if (!suportado) return;
-    await _plugin.cancel(_idHidratacao);
-    await _plugin.cancel(_idRegistroDia);
+    await AwesomeNotifications().cancel(_idHidratacao);
+    await AwesomeNotifications().cancel(_idRegistroDia);
   }
 
   Future<void> cancelarTudo() async {
     if (!suportado) return;
-    await _plugin.cancelAll();
-  }
-
-  Future<void> _agendarHoje({
-    required int id,
-    required int hora,
-    required int minuto,
-    required String canalId,
-    required String canalNome,
-    required String titulo,
-    required String corpo,
-  }) async {
-    final agora = tz.TZDateTime.now(tz.local);
-    var quando =
-        tz.TZDateTime(tz.local, agora.year, agora.month, agora.day, hora, minuto);
-    if (quando.isBefore(agora)) {
-      quando = quando.add(const Duration(days: 1));
-    }
-    await _plugin.zonedSchedule(
-      id,
-      titulo,
-      corpo,
-      quando,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          canalId,
-          canalNome,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+    await AwesomeNotifications().cancelAll();
   }
 
   String _saudarNome(String? primeiroNome) {
@@ -225,13 +209,8 @@ class NotificationService {
     return n.isEmpty ? 'você' : n;
   }
 
-  static const int _idHidratacao = 1001;
-  static const int _idRegistroDia = 1002;
-  static const int _idCelebracao = 1003;
-  static const int _idProximaDose = 1004;
-
-  /// Frases rotativas — mescla das sugestões do usuário com variações.
-  /// Cada tupla é (título, corpo). `{nome}` é substituído no envio.
+  /// Frases rotativas — sugestões do usuário + variações. `{nome}` é
+  /// substituído em tempo de envio.
   static const List<(String, String)> _frasesRotativas = [
     (
       'Parabéns, {nome}!',
