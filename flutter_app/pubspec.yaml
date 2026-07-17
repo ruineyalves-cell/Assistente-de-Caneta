@@ -54,8 +54,9 @@ dependencies:
   home_widget: ^0.9.3
 
   # Notificações locais acolhedoras (Lote 19).
-  # flutter_local_notifications removido temporariamente por AAR metadata
-  # incompatível — bisecting p/ identificar qual dep quebra o build.
+  # v16.3.3 é a última linha estável que não força compileSdk 36 nem
+  # traz dependências AAR incompatíveis com Flutter 3.44/AGP 9.
+  flutter_local_notifications: ^16.3.3
   timezone: ^0.9.4
   permission_handler: ^11.2.0
 
