@@ -40,6 +40,15 @@
 -dontwarn kotlinx.**
 -keep class kotlinx.coroutines.** { *; }
 
+# ------- Flutter Play Store deferred components ---------
+# O engine referencia FlutterPlayStoreSplitApplication e classes de
+# split-install do Google Play Core mesmo quando o app não usa
+# deferred components. R8 tenta resolvê-las e falha; instruímos a
+# ignorar (o código nunca é executado em builds sem deferred).
+-dontwarn com.google.android.play.core.**
+-dontwarn io.flutter.embedding.android.FlutterPlayStoreSplitApplication
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+
 # ------- Erros de otimização que não afetam runtime ----
 -dontwarn org.jetbrains.annotations.**
 -dontwarn javax.annotation.**
