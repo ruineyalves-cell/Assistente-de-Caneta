@@ -20,7 +20,14 @@ const perfilSchema = z.object({
 async function salvarPerfil(req, res, next) {
   try {
     const d = perfilSchema.parse(req.body);
-    if (!d.declarouPrescricao) {
+    // A declaração de prescrição é exigida apenas quando o payload
+    // efetivamente traz dados de medicação (id, dose ou frequência).
+    // Peso/altura/metas isoladamente não requerem declaração — são
+    // dados clínicos gerais que ajudam o dashboard mesmo sem GLP-1.
+    const tocaMedicacao = d.medicationId != null ||
+      (d.doseAtual != null && d.doseAtual !== '') ||
+      (d.frequencia != null && d.frequencia !== '');
+    if (tocaMedicacao && !d.declarouPrescricao) {
       return res.status(403).json({
         erro: 'É necessário declarar que possui prescrição médica para a medicação (Termos de Uso §3.1).',
       });
