@@ -32,11 +32,13 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            // R8 estava falhando com "Missing class ...ChineseTextRecognizerOptions"
-            // porque `google_mlkit_text_recognition` referencia scripts opcionais
-            // via reflection. proguard-rules.pro adiciona -dontwarn para eles.
+            // R8 é ativado (necessário para as regras de `-dontwarn` do
+            // proguard-rules.pro ancorarem — sem elas o mlkit trava o
+            // build). shrinkResources fica desligado: se você ativar,
+            // ele remove drawables/XML que o Flutter engine usa no
+            // startup e o app aparece como "falhas contínuas" no S25.
             isMinifyEnabled = true
-            isShrinkResources = true
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
