@@ -1,4 +1,5 @@
-// Smoke test: garante que o app monta e mostra a identidade Recorpo no login.
+// Smoke test: garante que o app monta em ambos os cenários — 1ª execução
+// (Disclaimer gate) e execuções seguintes (login com a marca Recorpo).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,13 +8,27 @@ import 'package:assistente_caneta/services/auth_service.dart';
 import 'package:assistente_caneta/utils/constants.dart';
 
 void main() {
-  testWidgets('App monta e exibe a marca Recorpo no login', (tester) async {
-    await tester.pumpWidget(MyApp(authService: AuthService()));
+  testWidgets('1ª execução: mostra o gate de Termos e Privacidade',
+      (tester) async {
+    await tester.pumpWidget(MyApp(
+      authService: AuthService(),
+      disclaimerAceitoInicial: false,
+    ));
     await tester.pump();
 
-    // A marca principal aparece (cabeçalho da tela de login).
+    expect(find.text('Termos de Uso e Privacidade'), findsOneWidget);
+    expect(find.text('Compreendo e Aceito'), findsOneWidget);
+  });
+
+  testWidgets('Execuções seguintes: cai direto no login com marca Recorpo',
+      (tester) async {
+    await tester.pumpWidget(MyApp(
+      authService: AuthService(),
+      disclaimerAceitoInicial: true,
+    ));
+    await tester.pump();
+
     expect(find.text(AppConstants.brandName), findsWidgets);
-    // Campo de e-mail presente = formulário de login renderizou.
     expect(find.byType(TextField), findsWidgets);
   });
 }
