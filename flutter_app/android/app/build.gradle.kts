@@ -32,6 +32,15 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 estava falhando com "Missing class ...ChineseTextRecognizerOptions"
+            // porque `google_mlkit_text_recognition` referencia scripts opcionais
+            // via reflection. proguard-rules.pro adiciona -dontwarn para eles.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
