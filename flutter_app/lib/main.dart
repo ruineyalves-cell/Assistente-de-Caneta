@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,9 +38,23 @@ void main() async {
   final disclaimerAceito =
       prefs.getBool(AppConstants.keyDisclaimerAceito) ?? false;
 
+  // Verifica se o app foi lançado a partir do App Widget do Android
+  // (Lote 17). Se sim, `initialUri` fica preenchido e usado depois para
+  // navegar direto à tela pedida.
+  Uri? initialUri;
+  if (!kIsWeb) {
+    try {
+      initialUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+    } catch (_) {
+      // Plugin indisponível ou plataforma sem suporte — segue normal.
+      initialUri = null;
+    }
+  }
+
   runApp(MyApp(
     authService: authService,
     disclaimerAceitoInicial: disclaimerAceito,
+    initialWidgetUri: initialUri,
   ));
 }
 
@@ -46,10 +62,16 @@ class MyApp extends StatefulWidget {
   final AuthService authService;
   final bool disclaimerAceitoInicial;
 
+  /// URI vinda do App Widget do Android (Lote 17) — se
+  /// `recorpo://scanner-refeicao`, o app roteia direto para a
+  /// CameraScannerScreen assim que o gate de disclaimer estiver aceito.
+  final Uri? initialWidgetUri;
+
   const MyApp({
     super.key,
     required this.authService,
     required this.disclaimerAceitoInicial,
+    this.initialWidgetUri,
   });
 
   @override
@@ -58,15 +80,40 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late bool _disclaimerAceito;
+  final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
+  bool _widgetIntentConsumido = false;
 
   @override
   void initState() {
     super.initState();
     _disclaimerAceito = widget.disclaimerAceitoInicial;
+    // Caso o disclaimer já esteja aceito e o app tenha sido lançado
+    // pelo widget, agenda a navegação para depois do primeiro frame.
+    if (_disclaimerAceito) _talvezAbrirTelaDoWidget();
   }
 
   void _onDisclaimerAceito() {
     setState(() => _disclaimerAceito = true);
+    _talvezAbrirTelaDoWidget();
+  }
+
+  /// Se o app foi lançado pelo widget de câmera E o disclaimer já foi
+  /// aceito, empurra a CameraScannerScreen no primeiro frame após o
+  /// build inicial.
+  void _talvezAbrirTelaDoWidget() {
+    if (_widgetIntentConsumido) return;
+    final uri = widget.initialWidgetUri;
+    if (uri == null || !_disclaimerAceito) return;
+    _widgetIntentConsumido = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nav = _navKey.currentState;
+      if (nav == null) return;
+      if (uri.host == 'scanner-refeicao') {
+        nav.push(MaterialPageRoute(
+          builder: (_) => const CameraScannerScreen(),
+        ));
+      }
+    });
   }
 
   @override
@@ -86,6 +133,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: _navKey,
         title: AppConstants.brandName,
         debugShowCheckedModeBanner: false,
         localizationsDelegates: const [
