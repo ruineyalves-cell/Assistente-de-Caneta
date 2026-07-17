@@ -62,6 +62,20 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Widget "Refeição" (Lote 17) — pílula na home do Android
+             que abre a câmera direto. Registra o AppWidgetProvider e
+             aponta para o XML de metadados. -->
+        <receiver
+            android:name=".RefeicaoWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/refeicao_widget_info" />
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

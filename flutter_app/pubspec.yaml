@@ -50,6 +50,9 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.2
 
+  # Home Screen Widgets do Android (Lote 17)
+  home_widget: ^0.9.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
