@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/constants.dart';
 
 class ScoreCard extends StatelessWidget {
   final int score; // 0-100
@@ -13,11 +14,11 @@ class ScoreCard extends StatelessWidget {
   }) : super(key: key);
 
   Color _getScoreColor() {
-    if (score >= 90) return Colors.green;
+    if (score >= 90) return AppColors.verdeConfirma;
     if (score >= 75) return Colors.lightGreen;
     if (score >= 60) return Colors.amber;
     if (score >= 40) return Colors.orange;
-    return Colors.red;
+    return AppColors.vermelhoAlerta;
   }
 
   String _getScoreLabel() {
