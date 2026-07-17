@@ -149,7 +149,7 @@ class NotificationService {
       final agora = DateTime.now();
       final dayOfYear = agora.difference(DateTime(agora.year, 1, 1)).inDays;
       final entry = _frasesRotativas[dayOfYear % _frasesRotativas.length];
-      titulo = entry.$1;
+      titulo = entry.$1.replaceAll('{nome}', nome);
       corpo = entry.$2.replaceAll('{nome}', nome);
     }
 
