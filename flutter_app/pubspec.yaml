@@ -54,11 +54,10 @@ dependencies:
   home_widget: ^0.9.3
 
   # Notificações locais acolhedoras (Lote 19).
-  # Requer compileSdk >= 36 (setado explicitamente em
-  # android/app/build.gradle.kts).
-  flutter_local_notifications: ^19.0.0
-  timezone: ^0.10.0
-  permission_handler: ^11.3.1
+  # Combo conservador testado com Flutter 3.44 + compileSdk 36.
+  flutter_local_notifications: ^17.2.4
+  timezone: ^0.9.4
+  permission_handler: ^11.2.0
 
 dev_dependencies:
   flutter_test:
