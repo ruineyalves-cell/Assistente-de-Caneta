@@ -622,7 +622,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       aceitoTermos
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
-                      color: aceitoTermos ? Colors.green : Colors.grey,
+                      color: aceitoTermos
+                          ? AppColors.verdeConfirma
+                          : Colors.grey,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -645,13 +647,14 @@ class _RegisterPageState extends State<RegisterPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: AppColors.vermelhoAlerta.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red),
+                    border: Border.all(color: AppColors.vermelhoAlerta),
                   ),
                   child: Text(
                     errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    style: const TextStyle(
+                        color: AppColors.vermelhoAlerta, fontSize: 12),
                   ),
                 ),
               ],
@@ -1070,7 +1073,8 @@ class _HistoryPageState extends State<HistoryPage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.2),
+                              color:
+                                  AppColors.verdeConfirma.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
