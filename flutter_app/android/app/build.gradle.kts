@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.example.assistente_caneta"
-    compileSdk = flutter.compileSdkVersion
+    // compileSdk 36 é exigido por dependências recentes (home_widget 0.9,
+    // flutter_local_notifications 18+, permission_handler 11+). Flutter
+    // 3.44 fornece 35 por padrão; sobrescrevemos aqui.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
