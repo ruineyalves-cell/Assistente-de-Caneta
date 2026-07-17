@@ -14,6 +14,7 @@ import 'widgets/metric_chart.dart';
 import 'widgets/recomposition_card.dart';
 import 'widgets/macros_card.dart';
 import 'widgets/effort_preview_card.dart';
+import 'widgets/floating_nav_bar.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -788,23 +789,18 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
+      // extendBody deixa o conteúdo passar POR BAIXO da nav flutuante;
+      // adicionamos padding-bottom no scroll da HomePage para não ficar
+      // escondido atrás da pílula.
+      extendBody: true,
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: FloatingNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Histórico',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
+          FloatingNavItem(icone: Icons.home_rounded, rotulo: 'Home'),
+          FloatingNavItem(icone: Icons.history_rounded, rotulo: 'Histórico'),
+          FloatingNavItem(icone: Icons.person_rounded, rotulo: 'Perfil'),
         ],
       ),
     );
@@ -921,33 +917,25 @@ class _HomePageState extends State<HomePage> {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            // padding-bottom generoso: a FloatingNavBar fica sobre o
+            // conteúdo (extendBody), então o último card precisa desse
+            // espaço para não ficar coberto.
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 1) Saudação personalizada — preenchida pelo Lote 15;
+                //    por ora, um placeholder simples com o nome.
+                _SaudacaoPlaceholder(),
+                const SizedBox(height: 12),
+                // 2) Dica do dia — sobe do fim para a primeira dobra.
+                //    Conteúdo humanizado / gênero-aware entra no Lote 15.
+                _DicaDoDiaPlaceholder(),
+                const SizedBox(height: 16),
+                // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
                 const SizedBox(height: 16),
-                RecompositionCard(
-                  pesoAtualKg: pesoAtual,
-                  pesoAnteriorKg: pesoAnterior,
-                ),
-                const SizedBox(height: 16),
-                MacrosCard(
-                  metaProteinaG: metaProteinaG,
-                  metaAguaMl: metaAguaMl,
-                  consumidoProteinaG: consumidoProteinaG,
-                  consumidoAguaMl: consumidoAguaMl,
-                ),
-                const SizedBox(height: 16),
-                _ScannersRow(),
-                const SizedBox(height: 16),
-                EffortPreviewCard(
-                  eixo: _eixo,
-                  onAbrir: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const EffortScreen()),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                // 4) Celebração — score + streak
                 Row(
                   children: [
                     Expanded(
@@ -965,18 +953,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                if (logsProvider.scores.isNotEmpty)
-                  MetricChart(
-                    scores: logsProvider.scores
-                        .take(28)
-                        .map((s) => s.score)
-                        .toList(),
-                    title: 'Scores últimos 28 dias',
-                    subtitle:
-                        'Progressão de conformidade (proteína, hidratação, registro)',
-                  ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+                // 5) CTA principal — Registrar de hoje sobe pra posição
+                //    de destaque (era no fim; agora vem antes dos dados)
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -987,35 +966,55 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Registrar de hoje'),
+                    label: const Text('Registrar de hoje',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.azulClinico,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 6) Dados de composição
+                RecompositionCard(
+                  pesoAtualKg: pesoAtual,
+                  pesoAnteriorKg: pesoAnterior,
+                ),
+                const SizedBox(height: 16),
+                // 7) Macros
+                MacrosCard(
+                  metaProteinaG: metaProteinaG,
+                  metaAguaMl: metaAguaMl,
+                  consumidoProteinaG: consumidoProteinaG,
+                  consumidoAguaMl: consumidoAguaMl,
+                ),
+                const SizedBox(height: 16),
+                // 8) Ajuste de esforço
+                EffortPreviewCard(
+                  eixo: _eixo,
+                  onAbrir: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EffortScreen()),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  color: Colors.amber.withValues(alpha: 0.1),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('💡 Dica do dia',
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 8),
-                        Text(
-                          'Blindagem muscular começa no prato: priorize proteína '
-                          'de alto valor biológico em cada refeição e hidrate-se '
-                          'ao longo do dia. 💪🌊',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
+                // 9) Scanners (ferramentas mais avançadas)
+                _ScannersRow(),
+                const SizedBox(height: 16),
+                // 10) Análise longa — gráfico de 28 dias
+                if (logsProvider.scores.isNotEmpty)
+                  MetricChart(
+                    scores: logsProvider.scores
+                        .take(28)
+                        .map((s) => s.score)
+                        .toList(),
+                    title: 'Scores últimos 28 dias',
+                    subtitle:
+                        'Progressão de conformidade (proteína, hidratação, registro)',
                   ),
-                ),
               ],
             ),
           ),
@@ -1027,6 +1026,77 @@ class _HomePageState extends State<HomePage> {
 
 /// Card de destaque com o foco do dia — texto fixo "BLINDAGEM MUSCULAR"
 /// e o eixo farmacológico atual do perfil (ou CTA quando não configurado).
+/// Saudação simples com o nome do usuário — placeholder do Lote 14.
+/// O Lote 15 substitui por saudação humanizada / gênero-aware.
+class _SaudacaoPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    final primeiroNome = (auth.nome ?? '').split(' ').first;
+    final ola = primeiroNome.isEmpty ? 'Olá!' : 'Olá, $primeiroNome!';
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, right: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(ola,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text('Aqui é o seu espaço de acompanhamento.',
+              style: TextStyle(
+                  fontSize: 13, color: Colors.grey.shade700, height: 1.35)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dica do dia — placeholder estático até o Lote 15 plugar o service
+/// com pool e concordância de gênero.
+class _DicaDoDiaPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: AppColors.verdeConfirma.withValues(alpha: 0.10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: AppColors.verdeConfirma.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('💡', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Dica do dia',
+                      style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 1.4,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.verdeConfirma)),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Blindagem muscular começa no prato: priorize proteína '
+                    'de alto valor biológico em cada refeição e hidrate-se '
+                    'ao longo do dia. 💪🌊',
+                    style: TextStyle(fontSize: 13, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Dois botões de scanner lado a lado: refeição (câmera do Lote 9) e
 /// prescrição (OCR do Lote 10). Ambos abrem tela cheia.
 class _ScannersRow extends StatelessWidget {
