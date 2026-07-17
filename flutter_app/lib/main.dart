@@ -15,6 +15,7 @@ import 'widgets/recomposition_card.dart';
 import 'widgets/macros_card.dart';
 import 'widgets/effort_preview_card.dart';
 import 'screens/effort_screen.dart';
+import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
 import 'utils/constants.dart';
 import 'utils/validators.dart';
@@ -767,7 +768,17 @@ class _DashboardPageState extends State<DashboardPage> {
         title: const Text(AppConstants.brandName),
         actions: [
           IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'Relatório para o médico',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ReportScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Sair',
             onPressed: () {
               context.read<AuthService>().logout();
             },
