@@ -54,9 +54,10 @@ dependencies:
   home_widget: ^0.9.3
 
   # Notificações locais acolhedoras (Lote 19).
-  # v16.3.3 é a última linha estável que não força compileSdk 36 nem
-  # traz dependências AAR incompatíveis com Flutter 3.44/AGP 9.
-  flutter_local_notifications: ^16.3.3
+  # awesome_notifications no lugar de flutter_local_notifications: aquela
+  # linha tem duas armadilhas em Flutter 3.44 + compileSdk 36 —
+  # v<=16 falha `bigLargeIcon` ambíguo, v>=17 falha AAR metadata.
+  awesome_notifications: ^0.10.0
   timezone: ^0.9.4
   permission_handler: ^11.2.0
 
