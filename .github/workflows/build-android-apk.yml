@@ -31,20 +31,6 @@ jobs:
           flutter-version: '3.44.6'
           cache: true
 
-      - name: Generate Android platform files
-        working-directory: ./flutter_app
-        run: flutter create --platforms=android --project-name assistente_caneta .
-
-      - name: Ensure INTERNET permission (release manifest)
-        working-directory: ./flutter_app
-        run: |
-          M=android/app/src/main/AndroidManifest.xml
-          if ! grep -q 'android.permission.INTERNET' "$M"; then
-            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>' "$M"
-          fi
-          echo "----- AndroidManifest.xml -----"
-          cat "$M"
-
       - name: Get dependencies
         working-directory: ./flutter_app
         run: flutter pub get
