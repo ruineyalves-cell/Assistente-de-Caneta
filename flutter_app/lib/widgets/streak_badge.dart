@@ -14,7 +14,7 @@ class StreakBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.azulClinico.withOpacity(0.1),
+      color: AppColors.azulClinico.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -30,7 +30,7 @@ class StreakBadge extends StatelessWidget {
               height: 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.azulClinico.withOpacity(0.2),
+                color: AppColors.azulClinico.withValues(alpha: 0.2),
               ),
               child: Center(
                 child: Column(

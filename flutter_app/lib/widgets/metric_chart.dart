@@ -123,7 +123,7 @@ class MetricChart extends StatelessWidget {
                       ),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: AppColors.azulClinico.withOpacity(0.1),
+                        color: AppColors.azulClinico.withValues(alpha: 0.1),
                       ),
                     ),
                   ],

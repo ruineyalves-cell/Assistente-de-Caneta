@@ -33,7 +33,7 @@ class ScoreCard extends StatelessWidget {
     final scoreColor = _getScoreColor();
 
     return Card(
-      color: backgroundColor ?? scoreColor.withOpacity(0.1),
+      color: backgroundColor ?? scoreColor.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -60,7 +60,7 @@ class ScoreCard extends StatelessWidget {
             const SizedBox(height: 12),
             LinearProgressIndicator(
               value: score / 100,
-              backgroundColor: scoreColor.withOpacity(0.2),
+              backgroundColor: scoreColor.withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
               minHeight: 6,
               borderRadius: BorderRadius.circular(3),
