@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/disclaimer_screen.dart';
+import 'screens/profile_config_screen.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/logs_provider.dart';
@@ -1158,79 +1159,10 @@ class _HistoryPageState extends State<HistoryPage> {
 // ============================================================================
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthService>(
-      builder: (context, authService, _) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const CircleAvatar(
-                          radius: 40, child: Icon(Icons.person, size: 40)),
-                      const SizedBox(height: 16),
-                      Text(
-                        authService.nome ?? 'Usuário',
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        authService.email ?? 'email@example.com',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ListTile(
-                leading: const Icon(Icons.settings),
-                title: const Text('Configurações'),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: const Text('Privacidade e termos'),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.help),
-                title: const Text('Sobre'),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () {},
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'ℹ️ Versão 0.1.0 - Beta\n\nApp em desenvolvimento. '
-                  'Seus dados são protegidos conforme LGPD.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => const ProfileConfigScreen();
 }
 
 // ============================================================================
