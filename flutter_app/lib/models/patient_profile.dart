@@ -72,6 +72,29 @@ extension EixoFarmacologicoLabel on EixoFarmacologico {
   /// a "Data da última dose" faz sentido.
   bool get envolveMedicacao =>
       this != EixoFarmacologico.recomposicaoNatural;
+
+  /// Categorias de medicação (coluna `categoria` da tabela medications)
+  /// compatíveis com este eixo. Lista vazia = eixo sem medicação
+  /// disponível no catálogo (dropdown fica vazio com CTA informativo).
+  ///
+  /// Referência: database/seeds/001_medications.sql — categorias reais
+  /// hoje: "GLP-1", "GLP-1 oral", "GLP-1/GIP (duplo agonista)",
+  /// "GLP-1/GIP/GCG (triplo agonista)".
+  List<String> get categoriasAceitas {
+    switch (this) {
+      case EixoFarmacologico.glp1Simples:
+        return const ['GLP-1', 'GLP-1 oral'];
+      case EixoFarmacologico.duplo:
+        return const ['GLP-1/GIP (duplo agonista)'];
+      case EixoFarmacologico.triplo:
+        return const ['GLP-1/GIP/GCG (triplo agonista)'];
+      case EixoFarmacologico.combinadaMiostatina:
+        // Sem análogos de miostatina aprovados no Brasil (jul/2026).
+        return const [];
+      case EixoFarmacologico.recomposicaoNatural:
+        return const [];
+    }
+  }
 }
 
 /// Chaves usadas no `shared_preferences` para os campos que o backend ainda
