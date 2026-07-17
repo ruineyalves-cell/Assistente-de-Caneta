@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/patient_profile.dart';
 import '../services/effort_advisor.dart';
 import '../utils/constants.dart';
+import 'health_hub_screen.dart';
 
 /// Tela do Ajuste de Esforço (Lote 12).
 ///
@@ -54,6 +55,13 @@ class _EffortScreenState extends State<EffortScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _CabecalhoEixo(eixo: _eixo),
+                  const SizedBox(height: 12),
+                  _AtalhoSmartwatch(
+                    onAbrir: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const HealthHubScreen()),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   ..._advisor
                       .recomendacoes(_eixo)
@@ -113,6 +121,29 @@ class _CabecalhoEixo extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AtalhoSmartwatch extends StatelessWidget {
+  final VoidCallback onAbrir;
+  const _AtalhoSmartwatch({required this.onAbrir});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.azulClinico,
+          child: Icon(Icons.watch_outlined, color: Colors.white, size: 20),
+        ),
+        title: const Text('Ver dados do smartwatch',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text('FC + gasto ativo do dia via Health Connect',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        trailing: const Icon(Icons.arrow_forward, size: 18),
+        onTap: onAbrir,
       ),
     );
   }
