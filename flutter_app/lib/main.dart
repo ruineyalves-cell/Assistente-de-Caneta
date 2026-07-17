@@ -11,6 +11,8 @@ import 'services/logs_provider.dart';
 import 'widgets/score_card.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
+import 'widgets/recomposition_card.dart';
+import 'models/patient_profile.dart';
 import 'utils/constants.dart';
 import 'utils/validators.dart';
 
@@ -796,110 +798,218 @@ class _DashboardPageState extends State<DashboardPage> {
 // HOME PAGE
 // ============================================================================
 
-class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  EixoFarmacologico? _eixo;
+  bool _eixoCarregado = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarEixo();
+  }
+
+  Future<void> _carregarEixo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final nome = prefs.getString(ProfilePrefsKeys.eixoFarmacologico);
+    if (!mounted) return;
+    setState(() {
+      _eixo = nome == null
+          ? null
+          : EixoFarmacologico.values
+              .cast<EixoFarmacologico?>()
+              .firstWhere((v) => v?.name == nome, orElse: () => null);
+      _eixoCarregado = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<LogsProvider>(
       builder: (context, logsProvider, _) {
-        if (logsProvider.isLoading) {
+        if (logsProvider.isLoading || !_eixoCarregado) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Medicação atual',
-                          style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      const Text('Mounjaro (10mg)',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      const Text('1x/semana', style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
+        // Peso mais recente reportado nos logs (topo da lista, se ordenada
+        // por data desc). O comparador anterior é o segundo com peso.
+        final logsComPeso =
+            logsProvider.logs.where((l) => l.pesoKg != null).toList();
+        final pesoAtual =
+            logsComPeso.isNotEmpty ? logsComPeso.first.pesoKg : null;
+        final pesoAnterior =
+            logsComPeso.length > 1 ? logsComPeso[1].pesoKg : null;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              logsProvider.carregarDashboard(),
+              _carregarEixo(),
+            ]);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FocoDoDia(eixo: _eixo),
+                const SizedBox(height: 16),
+                RecompositionCard(
+                  pesoAtualKg: pesoAtual,
+                  pesoAnteriorKg: pesoAnterior,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: StreakBadge(
-                      days: logsProvider.streak,
-                      title: 'Streak',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ScoreCard(
-                      score: logsProvider.scoreToday,
-                      label: 'Score hoje',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (logsProvider.scores.isNotEmpty)
-                MetricChart(
-                  scores:
-                      logsProvider.scores.take(28).map((s) => s.score).toList(),
-                  title: 'Scores últimos 28 dias',
-                  subtitle:
-                      'Progressão de conformidade (proteína, hidratação, registro)',
-                ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LogDailyPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Registrar de hoje'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.azulClinico,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                color: Colors.amber.withValues(alpha: 0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('💡 Dica do dia',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8),
-                      Text(
-                        'Bula Mounjaro recomenda: beba 2-3 litros de água por dia para evitar desidratação. '
-                        'Continue hidratado! 🌊',
-                        style: TextStyle(fontSize: 12),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: StreakBadge(
+                        days: logsProvider.streak,
+                        title: 'Streak',
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ScoreCard(
+                        score: logsProvider.scoreToday,
+                        label: 'Score hoje',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (logsProvider.scores.isNotEmpty)
+                  MetricChart(
+                    scores: logsProvider.scores
+                        .take(28)
+                        .map((s) => s.score)
+                        .toList(),
+                    title: 'Scores últimos 28 dias',
+                    subtitle:
+                        'Progressão de conformidade (proteína, hidratação, registro)',
+                  ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LogDailyPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Registrar de hoje'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.azulClinico,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Card(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('💡 Dica do dia',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8),
+                        Text(
+                          'Blindagem muscular começa no prato: priorize proteína '
+                          'de alto valor biológico em cada refeição e hidrate-se '
+                          'ao longo do dia. 💪🌊',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Card de destaque com o foco do dia — texto fixo "BLINDAGEM MUSCULAR"
+/// e o eixo farmacológico atual do perfil (ou CTA quando não configurado).
+class _FocoDoDia extends StatelessWidget {
+  final EixoFarmacologico? eixo;
+  const _FocoDoDia({required this.eixo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: AppColors.azulClinico.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+            color: AppColors.azulClinico.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.shield_outlined,
+                    color: AppColors.azulClinico, size: 20),
+                const SizedBox(width: 8),
+                Text('FOCO DO DIA',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.azulClinico,
+                      letterSpacing: 2.0,
+                    )),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Blindagem Muscular',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            if (eixo != null)
+              Row(
+                children: [
+                  const Icon(Icons.science_outlined,
+                      size: 14, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Eixo: ${eixo!.label}',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                'Configure sua matriz metabólica na aba Perfil para '
+                'personalizar o acompanhamento.',
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
