@@ -52,6 +52,25 @@ class ApiService {
               return handler.reject(error);
             }
           }
+
+          // 502/503/504 → o Render free tier hibernou e está acordando.
+          // Damos até 2 tentativas com backoff antes de repassar o erro.
+          final status = error.response?.statusCode;
+          if ((status == 502 || status == 503 || status == 504)) {
+            final opts = error.requestOptions;
+            final tentativa = (opts.extra['retry_5xx'] as int?) ?? 0;
+            if (tentativa < 2) {
+              await Future.delayed(Duration(seconds: 3 + tentativa * 4));
+              opts.extra['retry_5xx'] = tentativa + 1;
+              try {
+                final response = await _dio.fetch(opts);
+                return handler.resolve(response);
+              } on DioException catch (retryError) {
+                return handler.reject(retryError);
+              }
+            }
+          }
+
           return handler.reject(error);
         },
       ),
@@ -289,6 +308,21 @@ class ApiService {
   // ========== UTILS ==========
 
   String _parseError(DioException e) {
+    // Erros de infraestrutura do Render free tier — o serviço hiberna
+    // após 15min e a primeira requisição pode voltar com 502/503/504
+    // até o app subir. Damos mensagem amigável em vez do stack trace.
+    final status = e.response?.statusCode;
+    if (status == 502 || status == 503 || status == 504) {
+      return 'O servidor está acordando. Tente novamente em ~1 minuto.';
+    }
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return 'A resposta demorou demais. Verifique sua conexão e tente novamente.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Sem conexão com o servidor. Verifique sua internet.';
+    }
     if (e.response != null) {
       final data = e.response!.data;
       if (data is Map && data.containsKey('erro')) {
