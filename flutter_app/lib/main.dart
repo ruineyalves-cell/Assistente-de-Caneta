@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: AppConstants.appName,
+        title: AppConstants.brandName,
         debugShowCheckedModeBanner: false,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -47,15 +47,16 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
+            seedColor: AppColors.azulClinico,
             brightness: Brightness.light,
           ),
+          scaffoldBackgroundColor: AppColors.fundoFrio,
           fontFamily: 'Roboto',
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
+            seedColor: AppColors.azulClinico,
             brightness: Brightness.dark,
           ),
           fontFamily: 'Roboto',
@@ -130,113 +131,289 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              const Text(
-                AppConstants.appName,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                AppConstants.appSubtitle,
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 60),
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'seu@email.com',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                obscureText: _obscureSenha,
-                decoration: InputDecoration(
-                  labelText: 'Senha',
-                  hintText: '••••••••',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureSenha
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    tooltip: _obscureSenha ? 'Mostrar senha' : 'Ocultar senha',
-                    onPressed: () =>
-                        setState(() => _obscureSenha = !_obscureSenha),
-                  ),
-                ),
-              ),
-              if (errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red),
-                  ),
-                  child: Text(
-                    errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _handleLogin,
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ===== Cabeçalho / identidade =====
+                    Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        Container(
+                          width: 92,
+                          height: 92,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF4A90D9),
+                                AppColors.azulClinico,
+                                Color(0xFF1E4E85),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.azulClinico
+                                    .withValues(alpha: 0.35),
+                                blurRadius: 28,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
                           ),
-                        )
-                      : const Text('Entrar', style: TextStyle(fontSize: 16)),
+                          child: const Icon(
+                            Icons.vaccines,
+                            size: 46,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [
+                              AppColors.azulClinico,
+                              Color(0xFF4A90D9),
+                            ],
+                          ).createShader(bounds),
+                          child: const Text(
+                            AppConstants.brandName,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 1.5,
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          AppConstants.appName.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                            letterSpacing: 2.8,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppConstants.appSubtitle,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // ===== Formulário =====
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 36),
+                        TextField(
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            hintText: 'seu@email.com',
+                            prefixIcon: const Icon(Icons.mail_outline),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: passwordController,
+                          obscureText: _obscureSenha,
+                          decoration: InputDecoration(
+                            labelText: 'Senha',
+                            hintText: '••••••••',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureSenha
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              tooltip: _obscureSenha
+                                  ? 'Mostrar senha'
+                                  : 'Ocultar senha',
+                              onPressed: () => setState(
+                                  () => _obscureSenha = !_obscureSenha),
+                            ),
+                          ),
+                        ),
+                        if (errorMessage != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.vermelhoAlerta
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border:
+                                  Border.all(color: AppColors.vermelhoAlerta),
+                            ),
+                            child: Text(
+                              errorMessage!,
+                              style: const TextStyle(
+                                color: AppColors.vermelhoAlerta,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 28),
+                        SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.azulClinico,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Entrar',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) => const RegisterPage()),
+                              );
+                            },
+                            child: const Text('Não tem conta? Criar uma'),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _AvisoImportante(
+                          corpo: AppConstants.disclaimerMedico
+                              .replaceFirst('⚠️ AVISO IMPORTANTE', '')
+                              .trim(),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RegisterPage()),
-                    );
-                  },
-                  child: const Text('Não tem conta? Criar uma'),
-                ),
-              ),
-              const SizedBox(height: 40),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber, width: 1),
-                ),
-                child: const Text(
-                  AppConstants.disclaimerMedico,
-                  style: TextStyle(fontSize: 11),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Aviso regulatório com o título "AVISO IMPORTANTE" em vermelho negrito
+/// pulsando (pisca suave, sem estrobo). Corpo centralizado.
+class _AvisoImportante extends StatefulWidget {
+  final String corpo;
+  const _AvisoImportante({required this.corpo});
+
+  @override
+  State<_AvisoImportante> createState() => _AvisoImportanteState();
+}
+
+class _AvisoImportanteState extends State<_AvisoImportante>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blink;
+
+  @override
+  void initState() {
+    super.initState();
+    _blink = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.vermelhoAlerta.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border:
+            Border.all(color: AppColors.vermelhoAlerta.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          FadeTransition(
+            opacity: Tween<double>(begin: 1.0, end: 0.2).animate(
+              CurvedAnimation(parent: _blink, curve: Curves.easeInOut),
+            ),
+            child: const Text(
+              '⚠️ AVISO IMPORTANTE',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.vermelhoAlerta,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            widget.corpo,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.45,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -483,7 +660,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: aceitoTermos && !isLoading ? _handleRegister : null,
+                  onPressed:
+                      aceitoTermos && !isLoading ? _handleRegister : null,
                   child: isLoading
                       ? const SizedBox(
                           height: 20,
@@ -537,7 +715,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppConstants.appName),
+        title: const Text(AppConstants.brandName),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -603,8 +781,7 @@ class HomePage extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      const Text('1x/semana',
-                          style: TextStyle(fontSize: 12)),
+                      const Text('1x/semana', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -630,10 +807,8 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
               if (logsProvider.scores.isNotEmpty)
                 MetricChart(
-                  scores: logsProvider.scores
-                      .take(28)
-                      .map((s) => s.score)
-                      .toList(),
+                  scores:
+                      logsProvider.scores.take(28).map((s) => s.score).toList(),
                   title: 'Scores últimos 28 dias',
                   subtitle:
                       'Progressão de conformidade (proteína, hidratação, registro)',
@@ -651,7 +826,7 @@ class HomePage extends StatelessWidget {
                   icon: const Icon(Icons.add),
                   label: const Text('Registrar de hoje'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
+                    backgroundColor: AppColors.azulClinico,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -730,9 +905,8 @@ class _LogDailyPageState extends State<LogDailyPage> {
         aguaMl: aguaController.text.trim().isNotEmpty
             ? int.tryParse(aguaController.text.trim())
             : null,
-        alimentos: alimentosController.text.isEmpty
-            ? null
-            : alimentosController.text,
+        alimentos:
+            alimentosController.text.isEmpty ? null : alimentosController.text,
         doseAplicada: doseAplicada,
       );
 
@@ -767,7 +941,8 @@ class _LogDailyPageState extends State<LogDailyPage> {
               decoration: InputDecoration(
                 labelText: 'Peso (kg)',
                 hintText: '98.5',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
@@ -777,7 +952,8 @@ class _LogDailyPageState extends State<LogDailyPage> {
               decoration: InputDecoration(
                 labelText: 'Proteína (g)',
                 hintText: '120',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
@@ -787,7 +963,8 @@ class _LogDailyPageState extends State<LogDailyPage> {
               decoration: InputDecoration(
                 labelText: 'Água (ml)',
                 hintText: '3000',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
@@ -797,7 +974,8 @@ class _LogDailyPageState extends State<LogDailyPage> {
               decoration: InputDecoration(
                 labelText: 'Alimentos/observações',
                 hintText: 'Ex: frango, brócolis, arroz...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
@@ -885,7 +1063,9 @@ class _HistoryPageState extends State<HistoryPage> {
                           DateFormat('dd/MM/yyyy').format(log.data),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        if (log.pesoKg != null && log.proteinaG != null && log.aguaMl != null)
+                        if (log.pesoKg != null &&
+                            log.proteinaG != null &&
+                            log.aguaMl != null)
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
@@ -922,7 +1102,8 @@ class _HistoryPageState extends State<HistoryPage> {
                     if (log.alimentos != null) ...[
                       const SizedBox(height: 8),
                       Text('🍽️ ${log.alimentos}',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
                     ],
                   ],
                 ),
@@ -1032,7 +1213,7 @@ class _TermosSheetState extends State<_TermosSheet> {
 
   static const String _texto = '''
 TERMOS DE USO E POLÍTICA DE PRIVACIDADE
-Assistente de Caneta — versão 0.1.0 (beta)
+Recorpo (Assistente de Caneta) — versão 0.1.0 (beta)
 
 1. NATUREZA DO APLICATIVO
 Este aplicativo é uma ferramenta educacional de registro e acompanhamento de conformidade para pessoas em tratamento com medicamentos da classe GLP-1/GIP. Ele NÃO fornece diagnóstico, NÃO substitui a orientação de profissionais de saúde e NÃO é um dispositivo médico.
@@ -1071,8 +1252,7 @@ Ao tocar em "Aceito", você declara ter lido e concordado com os Termos de Uso e
     super.initState();
     _scroll.addListener(() {
       if (!_leuTudo &&
-          _scroll.position.pixels >=
-              _scroll.position.maxScrollExtent - 24) {
+          _scroll.position.pixels >= _scroll.position.maxScrollExtent - 24) {
         setState(() => _leuTudo = true);
       }
     });
@@ -1120,7 +1300,8 @@ Ao tocar em "Aceito", você declara ter lido e concordado com os Termos de Uso e
                   thumbVisibility: true,
                   child: SingleChildScrollView(
                     controller: _scroll,
-                    child: const Text(_texto, style: TextStyle(fontSize: 13, height: 1.5)),
+                    child: const Text(_texto,
+                        style: TextStyle(fontSize: 13, height: 1.5)),
                   ),
                 ),
               ),

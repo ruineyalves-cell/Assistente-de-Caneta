@@ -1,10 +1,29 @@
+import 'package:flutter/material.dart';
+
+/// Tokens de cor da identidade visual MyoSync (fonte: docs/PRD.md §3).
+class AppColors {
+  /// Azul Clínico — cor primária / seed do tema.
+  static const Color azulClinico = Color(0xFF2B6CB0);
+
+  /// Fundo frio claro — superfícies e scaffold.
+  static const Color fundoFrio = Color(0xFFF4F7FA);
+
+  /// Vermelho de alerta clínico.
+  static const Color vermelhoAlerta = Color(0xFFE53E3E);
+
+  /// Verde de confirmação.
+  static const Color verdeConfirma = Color(0xFF48BB78);
+}
+
 class AppConstants {
   // API
   // static const String apiBaseUrl = 'http://localhost:3000'; // Dev
   static const String apiBaseUrl = 'https://assistente-caneta-backend-tkl7.onrender.com'; // Prod
 
   // Strings
-  static const String appName = 'Assistente de Caneta';
+  static const String brandName = 'Recorpo'; // marca principal
+  static const String appName =
+      'Assistente de Caneta'; // descritor complementar
   static const String appSubtitle = 'Acompanhamento de conformidade GLP-1';
 
   // Storage keys
