@@ -53,8 +53,10 @@ dependencies:
   # Home Screen Widgets do Android (Lote 17)
   home_widget: ^0.9.3
 
-  # Notificações locais acolhedoras (Lote 19)
-  flutter_local_notifications: ^19.0.0
+  # Notificações locais acolhedoras (Lote 19).
+  # v19 exige compileSdk 36 (Android 16); Flutter 3.44.6 fornece SDK 35
+  # por padrão, então travamos em v18.
+  flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
   permission_handler: ^11.3.1
 
