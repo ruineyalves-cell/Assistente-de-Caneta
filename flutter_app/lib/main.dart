@@ -20,6 +20,7 @@ import 'widgets/floating_nav_bar.dart';
 import 'services/greeting_service.dart';
 import 'services/daily_tip_service.dart';
 import 'services/water_widget_service.dart';
+import 'services/notification_service.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -53,6 +54,10 @@ void main() async {
     // Registra o callback background do widget de Água (Lote 18) para
     // que os toques em +250/+500 sejam processados em isolate isolado.
     await const WaterWidgetService().registrarCallback();
+
+    // Inicializa notificações locais (Lote 19). Permissão é pedida
+    // pela HomePage no primeiro carregamento para não bloquear o boot.
+    await NotificationService().inicializar();
   }
 
   runApp(MyApp(
@@ -984,7 +989,54 @@ class _HomePageState extends State<HomePage> {
       metaMl: metaAguaMl,
       hoje: agora,
     );
+
+    // (3) Notificações locais (Lote 19). Pede permissão na primeira vez;
+    // reagenda diárias com estado atualizado; celebra se streak fechou
+    // marco. Tudo silencioso — sem UI extra.
+    if (mounted) {
+      await _atualizarNotificacoes(
+        aguaHoje: aguaConsolidada,
+        metaAgua: metaAguaMl,
+        jaTeveLogHoje: logHoje != null,
+      );
+    }
   }
+
+  Future<void> _atualizarNotificacoes({
+    required int aguaHoje,
+    required int metaAgua,
+    required bool jaTeveLogHoje,
+  }) async {
+    final notif = NotificationService();
+    if (!notif.suportado) return;
+
+    final auth = context.read<AuthService>();
+    final logs = context.read<LogsProvider>();
+    final primeiroNome = (auth.nome ?? '').trim().split(' ').first;
+
+    // Pede permissão só na primeira vez; ignora resposta se negada
+    // (o app continua útil mesmo sem notificações).
+    await notif.pedirPermissao();
+
+    final abaixoDaMeta = metaAgua > 0 && aguaHoje < metaAgua;
+    await notif.reagendarDiarias(
+      primeiroNome: primeiroNome,
+      hidratacaoAbaixoDaMeta: abaixoDaMeta,
+      jaTeveLogHoje: jaTeveLogHoje,
+    );
+
+    // Celebração — dispara se hoje é marco de streak (3, 7, 30…) OU
+    // rotaciona motivação. Uma vez por sessão para não spammar.
+    if (!_celebrouNestaSessao) {
+      _celebrouNestaSessao = true;
+      await notif.celebrar(
+        primeiroNome: primeiroNome,
+        streakDias: logs.streak,
+      );
+    }
+  }
+
+  bool _celebrouNestaSessao = false;
 
   @override
   Widget build(BuildContext context) {
