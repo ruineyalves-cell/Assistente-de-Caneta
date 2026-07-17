@@ -16,6 +16,7 @@ import 'widgets/macros_card.dart';
 import 'widgets/effort_preview_card.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
+import 'screens/diet_scanner_screen.dart';
 import 'screens/effort_screen.dart';
 import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
@@ -938,7 +939,7 @@ class _HomePageState extends State<HomePage> {
                   consumidoAguaMl: consumidoAguaMl,
                 ),
                 const SizedBox(height: 16),
-                _ScanRefeicaoButton(),
+                _ScannersRow(),
                 const SizedBox(height: 16),
                 EffortPreviewCard(
                   eixo: _eixo,
@@ -1026,11 +1027,10 @@ class _HomePageState extends State<HomePage> {
 
 /// Card de destaque com o foco do dia — texto fixo "BLINDAGEM MUSCULAR"
 /// e o eixo farmacológico atual do perfil (ou CTA quando não configurado).
-/// Botão que abre a CameraScannerScreen e mostra um snackbar confirmando
-/// a captura. A análise por IA em si fica para lote futuro — este lote
-/// só entrega o pipeline câmera → foto.
-class _ScanRefeicaoButton extends StatelessWidget {
-  Future<void> _abrir(BuildContext context) async {
+/// Dois botões de scanner lado a lado: refeição (câmera do Lote 9) e
+/// prescrição (OCR do Lote 10). Ambos abrem tela cheia.
+class _ScannersRow extends StatelessWidget {
+  Future<void> _abrirRefeicao(BuildContext context) async {
     final foto = await Navigator.of(context).push<XFile?>(
       MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
     );
@@ -1044,26 +1044,42 @@ class _ScanRefeicaoButton extends StatelessWidget {
     }
   }
 
+  void _abrirPrescricao(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DietScannerScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: OutlinedButton.icon(
-        onPressed: () => _abrir(context),
-        icon: const Icon(Icons.camera_alt_outlined),
-        label: const Text(
-          'Escanear refeição com IA',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.azulClinico,
-          side: const BorderSide(color: AppColors.azulClinico, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+    final estilo = OutlinedButton.styleFrom(
+      foregroundColor: AppColors.azulClinico,
+      side: const BorderSide(color: AppColors.azulClinico, width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      padding: const EdgeInsets.symmetric(vertical: 14),
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => _abrirRefeicao(context),
+            icon: const Icon(Icons.camera_alt_outlined, size: 18),
+            label: const Text('Refeição',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            style: estilo,
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => _abrirPrescricao(context),
+            icon: const Icon(Icons.document_scanner_outlined, size: 18),
+            label: const Text('Prescrição',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            style: estilo,
+          ),
+        ),
+      ],
     );
   }
 }
