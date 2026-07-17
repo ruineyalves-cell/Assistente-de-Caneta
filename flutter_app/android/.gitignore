@@ -1,0 +1,14 @@
+# Note: `gradlew`, `gradlew.bat` e `gradle-wrapper.jar` são versionados
+# neste projeto porque o CI não regenera `flutter create` — a origem
+# do build Android agora é o próprio repo.
+/.gradle
+/captures/
+/local.properties
+GeneratedPluginRegistrant.java
+.cxx/
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/to/reference-keystore
+key.properties
+**/*.keystore
+**/*.jks
