@@ -12,6 +12,7 @@ import 'widgets/score_card.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
 import 'widgets/recomposition_card.dart';
+import 'widgets/macros_card.dart';
 import 'models/patient_profile.dart';
 import 'utils/constants.dart';
 import 'utils/validators.dart';
@@ -807,25 +808,43 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   EixoFarmacologico? _eixo;
-  bool _eixoCarregado = false;
+  PerfilBackend? _perfil;
+  bool _contextoCarregado = false;
 
   @override
   void initState() {
     super.initState();
-    _carregarEixo();
+    _carregarContexto();
   }
 
-  Future<void> _carregarEixo() async {
+  Future<void> _carregarContexto() async {
+    // Eixo (local + rápido) e perfil (backend) em paralelo. Falhas no
+    // perfil não bloqueiam o render: só afetam a exibição das metas.
     final prefs = await SharedPreferences.getInstance();
     final nome = prefs.getString(ProfilePrefsKeys.eixoFarmacologico);
+    final eixo = nome == null
+        ? null
+        : EixoFarmacologico.values
+            .cast<EixoFarmacologico?>()
+            .firstWhere((v) => v?.name == nome, orElse: () => null);
+
+    PerfilBackend? perfil;
+    try {
+      final auth = context.read<AuthService>();
+      final json = await auth.apiService.obterPerfil();
+      final perfilJson = json['perfil'] as Map<String, dynamic>?;
+      if (perfilJson != null) {
+        perfil = PerfilBackend.fromJson(perfilJson);
+      }
+    } catch (_) {
+      // Sem perfil ainda ou backend indisponível — segue sem metas.
+    }
+
     if (!mounted) return;
     setState(() {
-      _eixo = nome == null
-          ? null
-          : EixoFarmacologico.values
-              .cast<EixoFarmacologico?>()
-              .firstWhere((v) => v?.name == nome, orElse: () => null);
-      _eixoCarregado = true;
+      _eixo = eixo;
+      _perfil = perfil;
+      _contextoCarregado = true;
     });
   }
 
@@ -833,7 +852,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Consumer<LogsProvider>(
       builder: (context, logsProvider, _) {
-        if (logsProvider.isLoading || !_eixoCarregado) {
+        if (logsProvider.isLoading || !_contextoCarregado) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -846,11 +865,42 @@ class _HomePageState extends State<HomePage> {
         final pesoAnterior =
             logsComPeso.length > 1 ? logsComPeso[1].pesoKg : null;
 
+        // Metas do dia: peso × (metas do perfil ou defaults do PRD).
+        // Fallback para o peso do perfil (pesoInicialKg) quando ainda
+        // não há nenhum log com peso.
+        final pesoParaMeta = pesoAtual ?? _perfil?.pesoInicialKg;
+        final metaProteinaG = pesoParaMeta == null
+            ? null
+            : pesoParaMeta *
+                (_perfil?.metaProteinaGkg ??
+                    AppConstants.defaultMetaProteinaGkg);
+        final metaAguaMl = pesoParaMeta == null
+            ? null
+            : pesoParaMeta *
+                (_perfil?.metaAguaMlKg ?? AppConstants.defaultMetaAguaMlkg);
+
+        // Consumo de hoje: primeiro log cuja data == hoje. Se não há log
+        // hoje, mostra 0 (com barra em azul clínico), não `null`.
+        final hoje = DateTime.now();
+        final logHoje = logsProvider.logs
+            .cast<dynamic>()
+            .firstWhere(
+                (l) =>
+                    l != null &&
+                    l.data.year == hoje.year &&
+                    l.data.month == hoje.month &&
+                    l.data.day == hoje.day,
+                orElse: () => null);
+        final consumidoProteinaG =
+            logHoje == null ? 0.0 : (logHoje.proteinaG ?? 0).toDouble();
+        final consumidoAguaMl =
+            logHoje == null ? 0.0 : (logHoje.aguaMl ?? 0).toDouble();
+
         return RefreshIndicator(
           onRefresh: () async {
             await Future.wait([
               logsProvider.carregarDashboard(),
-              _carregarEixo(),
+              _carregarContexto(),
             ]);
           },
           child: SingleChildScrollView(
@@ -864,6 +914,13 @@ class _HomePageState extends State<HomePage> {
                 RecompositionCard(
                   pesoAtualKg: pesoAtual,
                   pesoAnteriorKg: pesoAnterior,
+                ),
+                const SizedBox(height: 16),
+                MacrosCard(
+                  metaProteinaG: metaProteinaG,
+                  metaAguaMl: metaAguaMl,
+                  consumidoProteinaG: consumidoProteinaG,
+                  consumidoAguaMl: consumidoAguaMl,
                 ),
                 const SizedBox(height: 16),
                 Row(
