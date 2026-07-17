@@ -7,12 +7,29 @@ class MetricChart extends StatelessWidget {
   final String title;
   final String? subtitle;
 
+  /// Janela da média móvel — PRD §5. 7 dias é o padrão semanal.
+  static const int _janelaMediaMovel = 7;
+
   const MetricChart({
-    Key? key,
+    super.key,
     required this.scores,
     required this.title,
     this.subtitle,
-  }) : super(key: key);
+  });
+
+  /// Média móvel simples com janela [_janelaMediaMovel]: para cada ponto,
+  /// média dos últimos N valores (ou dos disponíveis até o ponto, no
+  /// começo da série). Mantém o mesmo tamanho da entrada.
+  List<double> _mediaMovel(List<int> valores) {
+    final saida = <double>[];
+    for (var i = 0; i < valores.length; i++) {
+      final inicio = (i - _janelaMediaMovel + 1).clamp(0, valores.length);
+      final janela = valores.sublist(inicio, i + 1);
+      final soma = janela.fold<int>(0, (acc, v) => acc + v);
+      saida.add(soma / janela.length);
+    }
+    return saida;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,11 +51,11 @@ class MetricChart extends StatelessWidget {
       );
     }
 
-    // Preparar dados para o gráfico
-    final spots = <FlSpot>[];
-    for (int i = 0; i < scores.length; i++) {
-      spots.add(FlSpot(i.toDouble(), scores[i].toDouble()));
-    }
+    // Média móvel — corrige o PRD §5 (a linha "crua" oscilava demais).
+    final suave = _mediaMovel(scores);
+    final spots = <FlSpot>[
+      for (var i = 0; i < suave.length; i++) FlSpot(i.toDouble(), suave[i]),
+    ];
 
     final maxY = 100.0;
     final minY = 0.0;
@@ -149,6 +166,11 @@ class MetricChart extends StatelessWidget {
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Linha suavizada — média móvel de 7 dias.',
+              style: TextStyle(fontSize: 10, color: Colors.grey),
             ),
           ],
         ),
