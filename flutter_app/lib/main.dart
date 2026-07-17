@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/disclaimer_screen.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/logs_provider.dart';
@@ -17,19 +19,48 @@ void main() async {
   final authService = AuthService();
   await authService.initialize();
 
-  runApp(MyApp(authService: authService));
+  final prefs = await SharedPreferences.getInstance();
+  final disclaimerAceito =
+      prefs.getBool(AppConstants.keyDisclaimerAceito) ?? false;
+
+  runApp(MyApp(
+    authService: authService,
+    disclaimerAceitoInicial: disclaimerAceito,
+  ));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final AuthService authService;
+  final bool disclaimerAceitoInicial;
 
-  const MyApp({Key? key, required this.authService}) : super(key: key);
+  const MyApp({
+    super.key,
+    required this.authService,
+    required this.disclaimerAceitoInicial,
+  });
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late bool _disclaimerAceito;
+
+  @override
+  void initState() {
+    super.initState();
+    _disclaimerAceito = widget.disclaimerAceitoInicial;
+  }
+
+  void _onDisclaimerAceito() {
+    setState(() => _disclaimerAceito = true);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthService>.value(value: authService),
+        ChangeNotifierProvider<AuthService>.value(value: widget.authService),
         ProxyProvider<AuthService, LogsProvider>(
           update: (_, authService, __) => LogsProvider(authService.apiService),
         ),
@@ -62,13 +93,15 @@ class MyApp extends StatelessWidget {
           fontFamily: 'Roboto',
         ),
         themeMode: ThemeMode.system,
-        home: Consumer<AuthService>(
-          builder: (context, authService, _) {
-            return authService.isAuthenticated
-                ? const DashboardPage()
-                : const LoginPage();
-          },
-        ),
+        home: _disclaimerAceito
+            ? Consumer<AuthService>(
+                builder: (context, authService, _) {
+                  return authService.isAuthenticated
+                      ? const DashboardPage()
+                      : const LoginPage();
+                },
+              )
+            : DisclaimerScreen(onAceito: _onDisclaimerAceito),
       ),
     );
   }
@@ -1215,42 +1248,6 @@ class _TermosSheetState extends State<_TermosSheet> {
   final _scroll = ScrollController();
   bool _leuTudo = false;
 
-  static const String _texto = '''
-TERMOS DE USO E POLÍTICA DE PRIVACIDADE
-Recorpo (Assistente de Caneta) — versão 0.1.0 (beta)
-
-1. NATUREZA DO APLICATIVO
-Este aplicativo é uma ferramenta educacional de registro e acompanhamento de conformidade para pessoas em tratamento com medicamentos da classe GLP-1/GIP. Ele NÃO fornece diagnóstico, NÃO substitui a orientação de profissionais de saúde e NÃO é um dispositivo médico.
-
-2. USO PERMITIDO
-2.1. O uso é permitido apenas para maiores de 18 anos.
-2.2. Você é responsável pela veracidade dos dados que registra.
-2.3. As informações educativas exibidas são reproduções de fontes oficiais (bulas Anvisa, ABESO, Ministério da Saúde, ADA), sempre citadas.
-
-3. DADOS E PRIVACIDADE (LGPD — Lei 13.709/2018)
-3.1. Seus dados de saúde são dados sensíveis e tratados com base no seu consentimento (art. 11).
-3.2. Os dados são criptografados em trânsito (HTTPS) e sensíveis são cifrados no servidor.
-3.3. Você pode, a qualquer momento: acessar, corrigir, exportar e solicitar a exclusão dos seus dados.
-3.4. A exclusão remove sua conta e agenda a eliminação definitiva dos dados em até 30 dias.
-3.5. Não vendemos nem compartilhamos seus dados com terceiros para fins de marketing.
-
-4. LIMITAÇÃO DE RESPONSABILIDADE
-4.1. As decisões sobre sua medicação, dose e tratamento devem ser sempre tomadas com seu médico.
-4.2. O aplicativo não se responsabiliza por decisões tomadas exclusivamente com base nos registros ou alertas exibidos.
-
-5. SEGURANÇA
-5.1. Mantenha sua senha em sigilo.
-5.2. Em caso de suspeita de acesso indevido, altere sua senha.
-
-6. ALTERAÇÕES
-Estes termos podem ser atualizados. Mudanças relevantes serão comunicadas no aplicativo.
-
-7. CONTATO
-Dúvidas sobre privacidade e seus direitos podem ser encaminhadas ao controlador dos dados pelo canal de suporte informado no aplicativo.
-
-Ao tocar em "Aceito", você declara ter lido e concordado com os Termos de Uso e a Política de Privacidade acima, e consente com o tratamento dos seus dados de saúde para a finalidade de acompanhamento de conformidade.
-''';
-
   @override
   void initState() {
     super.initState();
@@ -1304,7 +1301,7 @@ Ao tocar em "Aceito", você declara ter lido e concordado com os Termos de Uso e
                   thumbVisibility: true,
                   child: SingleChildScrollView(
                     controller: _scroll,
-                    child: const Text(_texto,
+                    child: const Text(AppConstants.termosLegaisTexto,
                         style: TextStyle(fontSize: 13, height: 1.5)),
                   ),
                 ),
