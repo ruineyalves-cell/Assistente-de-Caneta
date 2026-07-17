@@ -35,6 +35,14 @@
 -keep class io.flutter.plugins.camera.** { *; }
 -keep class io.flutter.plugins.imagepicker.** { *; }
 
+# ------- home_widget (Lotes 17-18) ---------
+# BroadcastReceiver e Workers do background callback são invocados por
+# reflection pelo Android — sem estas regras o Dart isolate nunca é
+# disparado em release.
+-keep class es.antonborri.home_widget.** { *; }
+-keep class com.example.assistente_caneta.RefeicaoWidgetProvider { *; }
+-keep class com.example.assistente_caneta.AguaWidgetProvider { *; }
+
 # ------- Kotlin stdlib / coroutines (usadas por plugins nativos) ---
 -keep class kotlin.Metadata { *; }
 -dontwarn kotlinx.**

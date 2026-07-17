@@ -19,6 +19,7 @@ import 'widgets/effort_preview_card.dart';
 import 'widgets/floating_nav_bar.dart';
 import 'services/greeting_service.dart';
 import 'services/daily_tip_service.dart';
+import 'services/water_widget_service.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -49,6 +50,9 @@ void main() async {
       // Plugin indisponível ou plataforma sem suporte — segue normal.
       initialUri = null;
     }
+    // Registra o callback background do widget de Água (Lote 18) para
+    // que os toques em +250/+500 sejam processados em isolate isolado.
+    await const WaterWidgetService().registrarCallback();
   }
 
   runApp(MyApp(
@@ -916,6 +920,70 @@ class _HomePageState extends State<HomePage> {
       _perfil = perfil;
       _contextoCarregado = true;
     });
+
+    // Depois que perfil e logs estão carregados, sincronizamos o
+    // widget de Água: (1) descarrega o que ele acumulou em background
+    // no log do dia via backend, e (2) publica o novo total + a meta
+    // para o widget exibir. Falhas são silenciosas — o app segue OK.
+    await _sincronizarWidgetAgua();
+  }
+
+  Future<void> _sincronizarWidgetAgua() async {
+    const service = WaterWidgetService();
+    if (!service.suportado) return;
+
+    final auth = context.read<AuthService>();
+    final logs = context.read<LogsProvider>().logs;
+    final agora = DateTime.now();
+
+    // Localiza log de hoje (se existir) para saber o valor atual de água.
+    final logHoje = logs.cast<dynamic>().firstWhere(
+      (l) =>
+          l != null &&
+          l.data.year == agora.year &&
+          l.data.month == agora.month &&
+          l.data.day == agora.day,
+      orElse: () => null,
+    );
+    final aguaBackend =
+        logHoje == null ? 0 : (logHoje.aguaMl ?? 0) as int;
+
+    // (1) Consolida pendente do widget no backend, se houver.
+    final pendente = await service.lerEzerarPendente();
+    var aguaConsolidada = aguaBackend;
+    if (pendente > 0) {
+      final novoTotal = aguaBackend + pendente;
+      try {
+        await auth.apiService.registrarLog(
+          data: agora,
+          aguaMl: novoTotal,
+        );
+        aguaConsolidada = novoTotal;
+        // Recarrega o dashboard pra provider ficar coerente.
+        if (mounted) {
+          await context.read<LogsProvider>().carregarDashboard();
+        }
+      } catch (_) {
+        // Sem rede — devolvemos o pendente pra próxima abertura.
+        await HomeWidget.saveWidgetData<int>(
+            WaterWidgetKeys.pendente, pendente);
+        aguaConsolidada = aguaBackend + pendente; // ainda mostra
+      }
+    }
+
+    // (2) Publica estado atualizado no widget (número + meta).
+    final pesoParaMeta =
+        (logHoje?.pesoKg as double?) ?? _perfil?.pesoInicialKg;
+    final metaAguaMl = pesoParaMeta == null
+        ? 0
+        : (pesoParaMeta *
+                (_perfil?.metaAguaMlKg ?? AppConstants.defaultMetaAguaMlkg))
+            .round();
+    await service.publicarEstado(
+      hojeMl: aguaConsolidada,
+      metaMl: metaAguaMl,
+      hoje: agora,
+    );
   }
 
   @override
