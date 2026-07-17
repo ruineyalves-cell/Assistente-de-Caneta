@@ -13,6 +13,8 @@ import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
 import 'widgets/recomposition_card.dart';
 import 'widgets/macros_card.dart';
+import 'widgets/effort_preview_card.dart';
+import 'screens/effort_screen.dart';
 import 'models/patient_profile.dart';
 import 'utils/constants.dart';
 import 'utils/validators.dart';
@@ -921,6 +923,13 @@ class _HomePageState extends State<HomePage> {
                   metaAguaMl: metaAguaMl,
                   consumidoProteinaG: consumidoProteinaG,
                   consumidoAguaMl: consumidoAguaMl,
+                ),
+                const SizedBox(height: 16),
+                EffortPreviewCard(
+                  eixo: _eixo,
+                  onAbrir: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EffortScreen()),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
