@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 
-/// Resumo do dia lido do Health Connect (Lote 11).
+/// Resumo do dia lido do Health Connect (Lote 11 + Lote 22).
 class HealthResumoDia {
   final int? bpmMedio;
   final int? bpmMax;
   final double? kcalAtivas;
+  final int? passos;
+  final double? pesoUltimoKg;
+  final DateTime? pesoUltimoEm;
   final int amostrasBpm;
   final int amostrasKcal;
 
@@ -13,11 +16,18 @@ class HealthResumoDia {
     this.bpmMedio,
     this.bpmMax,
     this.kcalAtivas,
+    this.passos,
+    this.pesoUltimoKg,
+    this.pesoUltimoEm,
     this.amostrasBpm = 0,
     this.amostrasKcal = 0,
   });
 
-  bool get temDados => amostrasBpm > 0 || amostrasKcal > 0;
+  bool get temDados =>
+      amostrasBpm > 0 ||
+      amostrasKcal > 0 ||
+      (passos != null && passos! > 0) ||
+      pesoUltimoKg != null;
 
   static const vazio = HealthResumoDia();
 }
@@ -34,6 +44,8 @@ class HealthConnectService {
   static const List<HealthDataType> tiposLeitura = [
     HealthDataType.HEART_RATE,
     HealthDataType.ACTIVE_ENERGY_BURNED,
+    HealthDataType.STEPS,
+    HealthDataType.WEIGHT,
   ];
 
   /// Indica se a plataforma corrente tem chance de expor Health Connect.
@@ -62,31 +74,64 @@ class HealthConnectService {
     return r ?? false;
   }
 
-  /// Lê frequência cardíaca + calorias ativas do dia atual (00:00→agora)
-  /// e devolve o resumo agregado.
+  /// Lê frequência cardíaca + calorias ativas + passos do dia atual
+  /// (00:00→agora) + último peso registrado nos últimos 90 dias.
   Future<HealthResumoDia> resumoDeHoje() async {
     if (!suportado) return HealthResumoDia.vazio;
     await _garantirConfigurado();
     final agora = DateTime.now();
     final inicio = DateTime(agora.year, agora.month, agora.day);
 
-    final pontos = await _health.getHealthDataFromTypes(
-      types: tiposLeitura,
+    final pontosHoje = await _health.getHealthDataFromTypes(
+      types: const [
+        HealthDataType.HEART_RATE,
+        HealthDataType.ACTIVE_ENERGY_BURNED,
+        HealthDataType.STEPS,
+      ],
       startTime: inicio,
+      endTime: agora,
+    );
+
+    // Peso é medido esporadicamente — pega a leitura mais recente nos
+    // últimos 90 dias para exibir a tendência mesmo quando o usuário
+    // não pesa todo dia.
+    final pontosPeso = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.WEIGHT],
+      startTime: agora.subtract(const Duration(days: 90)),
       endTime: agora,
     );
 
     final bpms = <double>[];
     double kcal = 0;
     var amostrasKcal = 0;
-    for (final p in pontos) {
+    int passos = 0;
+    for (final p in pontosHoje) {
       final valor = p.value;
-      if (p.type == HealthDataType.HEART_RATE && valor is NumericHealthValue) {
-        bpms.add(valor.numericValue.toDouble());
-      } else if (p.type == HealthDataType.ACTIVE_ENERGY_BURNED &&
-          valor is NumericHealthValue) {
-        kcal += valor.numericValue.toDouble();
-        amostrasKcal += 1;
+      if (valor is! NumericHealthValue) continue;
+      switch (p.type) {
+        case HealthDataType.HEART_RATE:
+          bpms.add(valor.numericValue.toDouble());
+          break;
+        case HealthDataType.ACTIVE_ENERGY_BURNED:
+          kcal += valor.numericValue.toDouble();
+          amostrasKcal += 1;
+          break;
+        case HealthDataType.STEPS:
+          passos += valor.numericValue.toInt();
+          break;
+        default:
+          break;
+      }
+    }
+
+    double? pesoUltimo;
+    DateTime? pesoUltimoEm;
+    if (pontosPeso.isNotEmpty) {
+      pontosPeso.sort((a, b) => b.dateTo.compareTo(a.dateTo));
+      final v = pontosPeso.first.value;
+      if (v is NumericHealthValue) {
+        pesoUltimo = v.numericValue.toDouble();
+        pesoUltimoEm = pontosPeso.first.dateTo;
       }
     }
 
@@ -95,6 +140,9 @@ class HealthConnectService {
           bpms.isEmpty ? null : (bpms.reduce((a, b) => a + b) / bpms.length).round(),
       bpmMax: bpms.isEmpty ? null : bpms.reduce((a, b) => a > b ? a : b).round(),
       kcalAtivas: amostrasKcal == 0 ? null : kcal,
+      passos: passos == 0 ? null : passos,
+      pesoUltimoKg: pesoUltimo,
+      pesoUltimoEm: pesoUltimoEm,
       amostrasBpm: bpms.length,
       amostrasKcal: amostrasKcal,
     );

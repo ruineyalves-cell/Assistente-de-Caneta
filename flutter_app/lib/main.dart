@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,6 +11,7 @@ import 'screens/profile_config_screen.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/logs_provider.dart';
+import 'services/premium_service.dart';
 import 'widgets/score_card.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
@@ -24,6 +26,7 @@ import 'services/notification_service.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
+import 'screens/meal_result_screen.dart';
 import 'screens/effort_screen.dart';
 import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
@@ -35,6 +38,12 @@ void main() async {
 
   final authService = AuthService();
   await authService.initialize();
+
+  // Lote 20/23 — Premium service (Play Billing + gate Free/Pro).
+  // Inicializa após o auth para não bloquear o boot se a Play Store
+  // não estiver disponível (dev/CI/web).
+  final premiumService = PremiumService();
+  unawaited(premiumService.inicializar());
 
   final prefs = await SharedPreferences.getInstance();
   final disclaimerAceito =
@@ -62,6 +71,7 @@ void main() async {
 
   runApp(MyApp(
     authService: authService,
+    premiumService: premiumService,
     disclaimerAceitoInicial: disclaimerAceito,
     initialWidgetUri: initialUri,
   ));
@@ -69,6 +79,7 @@ void main() async {
 
 class MyApp extends StatefulWidget {
   final AuthService authService;
+  final PremiumService premiumService;
   final bool disclaimerAceitoInicial;
 
   /// URI vinda do App Widget do Android (Lote 17) — se
@@ -79,6 +90,7 @@ class MyApp extends StatefulWidget {
   const MyApp({
     super.key,
     required this.authService,
+    required this.premiumService,
     required this.disclaimerAceitoInicial,
     this.initialWidgetUri,
   });
@@ -130,6 +142,8 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: widget.authService),
+        ChangeNotifierProvider<PremiumService>.value(
+            value: widget.premiumService),
         // LogsProvider é um ChangeNotifier — precisa ser exposto via
         // ChangeNotifierProxyProvider para que os widgets escutem
         // notifyListeners(). Reaproveita a instância entre rebuilds e só
@@ -233,6 +247,31 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => errorMessage = e.toString());
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  // Lote 20 — Login social. `null` = cancelou; sucesso = navega pro
+  // dashboard igual o login por email.
+  void _handleLoginGoogle() async {
+    final authService = context.read<AuthService>();
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+      final resultado = await authService.signInComGoogle();
+      if (!mounted) return;
+      if (resultado == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
+      );
+    } catch (e) {
+      setState(() => errorMessage = e.toString());
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -420,6 +459,56 @@ class _LoginPageState extends State<LoginPage> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        // Divisor "ou"
+                        Row(
+                          children: [
+                            Expanded(
+                                child: Divider(color: Colors.grey.shade300)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text('ou',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade600, fontSize: 12)),
+                            ),
+                            Expanded(
+                                child: Divider(color: Colors.grey.shade300)),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        // Lote 20 — Botão de login com Google.
+                        SizedBox(
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: isLoading ? null : _handleLoginGoogle,
+                            icon: Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'G',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                  color: Color(0xFF4285F4),
+                                ),
+                              ),
+                            ),
+                            label: const Text(
+                              'Continuar com Google',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w600),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black87,
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -1287,15 +1376,14 @@ class _DicaDoDiaHumana extends StatelessWidget {
 /// prescrição (OCR do Lote 10). Ambos abrem tela cheia.
 class _ScannersRow extends StatelessWidget {
   Future<void> _abrirRefeicao(BuildContext context) async {
+    // Lote 21 — Depois de capturar, empurra pra MealResultScreen (IA
+    // local + backend). Se o usuário cancelou a câmera, foto == null.
     final foto = await Navigator.of(context).push<XFile?>(
       MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
     );
     if (foto != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Foto capturada: ${foto.name}'),
-          duration: const Duration(seconds: 2),
-        ),
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
       );
     }
   }

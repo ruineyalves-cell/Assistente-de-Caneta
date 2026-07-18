@@ -9,6 +9,7 @@ const patient = require('../controllers/patientController');
 const logs = require('../controllers/dailyLogController');
 const doctor = require('../controllers/doctorController');
 const lgpd = require('../controllers/lgpdController');
+const ia = require('../controllers/iaController');
 
 const r = Router();
 
@@ -17,6 +18,8 @@ r.post('/auth/registrar', authLimiter, auth.registrar);
 r.post('/auth/login', authLimiter, auth.login);
 r.post('/auth/refresh', authLimiter, auth.refresh);
 r.post('/auth/logout', requireAuth, auth.logout);
+// Lote 20 — Login social (Google agora; Apple depois).
+r.post('/auth/oauth-social', authLimiter, auth.oauthSocial);
 
 // --- Catálogo público de medicações (dados de bula — sem autenticação) ---
 r.get('/medicacoes', meds.listar);
@@ -40,6 +43,11 @@ r.delete('/pacientes/profissionais/:id', ...paciente, patient.revogarProfissiona
 r.post('/logs', ...paciente, audit('create', 'daily_logs'), logs.registrar);
 r.get('/logs', ...paciente, audit('read', 'daily_logs'), logs.listar);
 r.get('/logs/dashboard', ...paciente, audit('read', 'dashboard'), logs.dashboard);
+
+// --- IA de visão (Lote 21). Paciente autenticado com consentimento;
+// auditamos como "read" porque a imagem passa pelo servidor mas
+// deliberadamente NÃO persiste em disco (só pra IA externa efêmera).
+r.post('/ia/refeicao', ...paciente, audit('read', 'ia_refeicao'), ia.analisar);
 
 // --- Portal do profissional (read-only; auditoria com titular = paciente acessado) ---
 const prof = [requireAuth, requireRole('profissional')];

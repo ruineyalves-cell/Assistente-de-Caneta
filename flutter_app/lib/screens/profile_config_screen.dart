@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/patient_profile.dart';
 import '../services/auth_service.dart';
+import '../services/premium_service.dart';
 import '../utils/constants.dart';
+import 'paywall_screen.dart';
 
 /// Tela do Perfil / Matriz Metabólica (Lote 5).
 ///
@@ -502,10 +504,80 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+            const _CardPremium(),
             const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Lote 23 — Cartão que abre a paywall (ou avisa que é Premium).
+class _CardPremium extends StatelessWidget {
+  const _CardPremium();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PremiumService>(
+      builder: (ctx, premium, _) {
+        final ehPro = premium.isPremium;
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PaywallScreen()),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: ehPro
+                    ? const [AppColors.verdeConfirma, Color(0xFF2F855A)]
+                    : const [AppColors.azulClinico, Color(0xFF4A90D9)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                    ehPro
+                        ? Icons.workspace_premium
+                        : Icons.rocket_launch_outlined,
+                    color: Colors.white,
+                    size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ehPro ? 'Você é Premium 🎉' : 'Recorpo Premium',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        ehPro
+                            ? 'Todas as features desbloqueadas'
+                            : 'A partir de R\$ 12,49/mês (anual)',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios,
+                    color: Colors.white, size: 16),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

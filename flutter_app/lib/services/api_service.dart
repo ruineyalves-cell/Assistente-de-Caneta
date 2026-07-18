@@ -131,6 +131,34 @@ class ApiService {
     }
   }
 
+  /// Lote 20 — Login social via provedor OAuth (hoje: Google).
+  /// Envia o `idToken` pro backend, que valida a assinatura Google e
+  /// devolve os tokens JWT do próprio Recorpo. Também usado quando
+  /// usuário nunca esteve no app (cria conta on-the-fly).
+  Future<Map<String, dynamic>> loginSocial({
+    required String provedor, // 'google', futuramente 'apple'
+    required String idToken,
+    String? emailFallback,
+    String? nomeFallback,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/oauth-social',
+        data: {
+          'provedor': provedor,
+          'idToken': idToken,
+          if (emailFallback != null) 'email': emailFallback,
+          if (nomeFallback != null) 'nome': nomeFallback,
+        },
+      );
+      final data = response.data as Map<String, dynamic>;
+      setTokens(data['accessToken'] as String, data['refreshToken'] as String);
+      return data;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> refreshTokens() async {
     try {
       final response = await _dio.post(
@@ -273,6 +301,27 @@ class ApiService {
   Future<Map<String, dynamic>> dashboardLogs() async {
     try {
       final response = await _dio.get('/api/logs/dashboard');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
+  // ========== IA ==========
+
+  /// Lote 21 — Envia base64 da foto para o backend analisar. Se o
+  /// backend não tiver chave IA configurada, retorna
+  /// { iaConfigurada: false } — a UI segue com os labels locais.
+  Future<Map<String, dynamic>> analisarRefeicaoIA({
+    required String imagemBase64,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/ia/refeicao',
+        data: {'imagemBase64': imagemBase64},
+        // Análise pode demorar mais que os 70s padrão do Render frio
+        options: Options(receiveTimeout: const Duration(seconds: 120)),
+      );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _parseError(e);

@@ -61,6 +61,13 @@ dependencies:
   timezone: ^0.9.4
   permission_handler: ^11.2.0
 
+  # Lote 20 — Login social (Google) e assinatura Premium (Play Billing)
+  google_sign_in: ^6.2.1
+  in_app_purchase: ^3.2.0
+
+  # Lote 21 — Reconhecimento de comida na foto (roda on-device, sem chave)
+  google_mlkit_image_labeling: ^0.13.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

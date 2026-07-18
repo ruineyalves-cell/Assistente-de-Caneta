@@ -287,8 +287,58 @@ class _Kpis extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        // Lote 22 — Passos + peso do Health Connect (leitura real).
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.directions_walk,
+                        color: AppColors.azulClinico, size: 20),
+                    SizedBox(width: 8),
+                    Text('Movimento e peso',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _Kpi(
+                        valor: resumo.passos == null ? '—' : '${resumo.passos}',
+                        rotulo: 'passos hoje',
+                      ),
+                    ),
+                    Expanded(
+                      child: _Kpi(
+                        valor: resumo.pesoUltimoKg == null
+                            ? '—'
+                            : '${resumo.pesoUltimoKg!.toStringAsFixed(1)} kg',
+                        rotulo: resumo.pesoUltimoEm == null
+                            ? 'peso'
+                            : 'peso (${_diasAtras(resumo.pesoUltimoEm!)})',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  static String _diasAtras(DateTime d) {
+    final dias = DateTime.now().difference(d).inDays;
+    if (dias == 0) return 'hoje';
+    if (dias == 1) return 'ontem';
+    return '${dias}d atrás';
   }
 }
 
