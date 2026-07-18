@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_service.dart';
+import 'social_auth_service.dart';
 
 class AuthService extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -116,6 +117,74 @@ class AuthService extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Lote 20 — Login via Google Sign-In. Fluxo:
+  /// 1) Abre o Google consent screen (SocialAuthService)
+  /// 2) Recebe o idToken assinado pelo Google
+  /// 3) Envia pro backend, que valida a assinatura e cria/associa a conta
+  /// 4) Persiste tokens localmente igual o login por email/senha
+  ///
+  /// Retorna `null` se o usuário cancelou. Joga [String] com mensagem
+  /// amigável em caso de erro (mesmo padrão do login por email).
+  Future<Map<String, dynamic>?> signInComGoogle() async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final social = await SocialAuthService().signInComGoogle();
+      if (social == null) {
+        _isLoading = false;
+        notifyListeners();
+        return null; // cancelado
+      }
+      if (!social.ok) {
+        _error = social.erro;
+        _isLoading = false;
+        notifyListeners();
+        throw Exception(social.erro);
+      }
+
+      final response = await _apiService.loginSocial(
+        provedor: 'google',
+        idToken: social.idToken!,
+        emailFallback: social.email,
+        nomeFallback: social.nome,
+      );
+
+      final usuario = (response['usuario'] as Map?) ?? const {};
+      _accessToken = response['accessToken'] as String;
+      _refreshToken = response['refreshToken'] as String;
+      _userId = usuario['id']?.toString();
+      _email = (usuario['email'] as String?) ?? social.email;
+      _nome = (usuario['nome'] as String?) ?? social.nome;
+
+      await _storage.write(key: 'access_token', value: _accessToken);
+      await _storage.write(key: 'refresh_token', value: _refreshToken);
+      await _storage.write(key: 'user_id', value: _userId);
+      await _storage.write(key: 'email', value: _email);
+      if (_nome != null) {
+        await _storage.write(key: 'nome', value: _nome!);
+      }
+
+      // Consentimentos LGPD implícitos (o consent screen do Google já
+      // pediu email/profile; o disclaimer do app cobre saúde).
+      try {
+        await _apiService.registrarConsentimento('privacidade_saude');
+        _apiService.registrarConsentimento('termos_uso');
+        _apiService.registrarConsentimento('disclaimer_medico');
+      } catch (_) {}
+
+      _isLoading = false;
+      notifyListeners();
+      return response;
     } catch (e) {
       _error = e.toString();
       _isLoading = false;

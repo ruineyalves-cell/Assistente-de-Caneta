@@ -1,10 +1,21 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('node:crypto');
 const { z } = require('zod');
+const { OAuth2Client } = require('google-auth-library');
 const db = require('../config/db');
 const userModel = require('../models/userModel');
 const { signAccessToken } = require('../middleware/auth');
 const { sha256 } = require('../utils/crypto');
+
+// Lote 20 — Cliente OAuth do Google reaproveitado entre requisições.
+// GOOGLE_OAUTH_CLIENT_IDS aceita CSV — para permitir simultaneamente o
+// Web Client ID (usado como aud pelo google_sign_in Flutter) e o Android
+// Client ID quando o app é assinado pela release keystore.
+const _googleAudiences = (process.env.GOOGLE_OAUTH_CLIENT_IDS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const _googleClient = new OAuth2Client();
 
 const registroSchema = z.object({
   nome: z.string().min(3).max(160),
@@ -96,6 +107,99 @@ async function refresh(req, res, next) {
   } catch (err) { next(err); }
 }
 
+/**
+ * Lote 20 — Login social via provedor OAuth.
+ *
+ * Aceita `provedor: 'google'` (extensível a 'apple'). Valida o idToken
+ * assinado pelo provedor, extrai o email verificado e cria/associa o
+ * usuário. Retorna o mesmo shape do /auth/login para o Flutter reusar o
+ * fluxo.
+ *
+ * Segurança:
+ *   - Valida assinatura via biblioteca oficial do Google (não é só
+ *     `jwt.decode`).
+ *   - Só aceita audiences (aud) da lista GOOGLE_OAUTH_CLIENT_IDS.
+ *   - Só aceita emails verificados pelo Google.
+ *   - Se o email já existe com password_hash, apenas gera novos tokens
+ *     (associação implícita — usuário está provando que é dono do email).
+ */
+const oauthSchema = z.object({
+  provedor: z.enum(['google']),
+  idToken: z.string().min(20),
+  email: z.string().email().optional(),
+  nome: z.string().max(160).optional(),
+});
+
+async function oauthSocial(req, res, next) {
+  try {
+    const d = oauthSchema.parse(req.body);
+
+    if (d.provedor !== 'google') {
+      return res.status(400).json({ erro: 'Provedor OAuth não suportado ainda.' });
+    }
+    if (_googleAudiences.length === 0) {
+      return res.status(503).json({
+        erro:
+          'Login social ainda não configurado no servidor. Defina GOOGLE_OAUTH_CLIENT_IDS.',
+      });
+    }
+
+    let payload;
+    try {
+      const ticket = await _googleClient.verifyIdToken({
+        idToken: d.idToken,
+        audience: _googleAudiences,
+      });
+      payload = ticket.getPayload();
+    } catch (e) {
+      return res.status(401).json({ erro: 'Token do Google inválido ou expirado.' });
+    }
+
+    if (!payload || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({ erro: 'Conta Google sem email verificado.' });
+    }
+
+    const emailNorm = payload.email.toLowerCase();
+    const nome = (payload.name || d.nome || emailNorm.split('@')[0]).slice(0, 160);
+
+    let user = await userModel.porEmail(emailNorm);
+    if (!user) {
+      // Cria conta social: password_hash é um marcador não-logável
+      // (bcrypt de random) — impede login por senha em contas sociais.
+      const marker = await bcrypt.hash(
+        `oauth:google:${payload.sub}:${crypto.randomBytes(16).toString('hex')}`,
+        4
+      );
+      const dataNascimento = '1900-01-01'; // desconhecida na criação; usuário completa no perfil
+      user = await userModel.criar({
+        email: emailNorm,
+        passwordHash: marker,
+        role: 'paciente',
+        nome,
+        dataNascimento,
+      });
+    }
+
+    const refresh = await emitirRefresh(user.id);
+    return res.json({
+      usuario: {
+        id: user.id,
+        nome: user.nome || nome,
+        email: user.email || emailNorm,
+        role: user.role || 'paciente',
+      },
+      accessToken: signAccessToken({ id: user.id, role: user.role || 'paciente' }),
+      refreshToken: refresh,
+      social: {
+        provedor: 'google',
+        criouConta: !user.created_at ? false : new Date(user.created_at).getTime() > Date.now() - 30_000,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function logout(req, res, next) {
   try {
     const { refreshToken } = z.object({ refreshToken: z.string() }).parse(req.body);
@@ -104,4 +208,4 @@ async function logout(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { registrar, login, refresh, logout };
+module.exports = { registrar, login, refresh, logout, oauthSocial };

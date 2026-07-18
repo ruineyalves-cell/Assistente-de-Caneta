@@ -13,6 +13,9 @@
          execução ao usuário via UI do próprio Health Connect. -->
     <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <!-- Lote 22 — Steps + Peso (Health Connect real) -->
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
 
     <!-- Notificações locais (Lote 19). POST_NOTIFICATIONS é exigido no
          Android 13+ e pedido em runtime. SCHEDULE_EXACT_ALARM garante

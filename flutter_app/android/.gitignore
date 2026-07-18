@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Lote 20 — Configuração Firebase Google Sign-In (contém client IDs OAuth,
+# não pode ir para repositório público). Cada dev/CI configura o seu.
+app/google-services.json
