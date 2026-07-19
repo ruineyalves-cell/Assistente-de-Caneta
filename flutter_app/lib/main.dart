@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:convert' show jsonDecode;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -1175,6 +1176,37 @@ class _HomePageState extends State<HomePage> {
         final consumidoAguaMl =
             logHoje == null ? 0.0 : (logHoje.aguaMl ?? 0).toDouble();
 
+        // Lote 26 — Métricas para os EixoCards do hero.
+        final logsDeHoje = logsProvider.logs
+            .cast<dynamic>()
+            .where((l) =>
+                l != null &&
+                l.data.year == hoje.year &&
+                l.data.month == hoje.month &&
+                l.data.day == hoje.day)
+            .toList();
+        final refeicoesHoje = logsDeHoje
+            .where((l) =>
+                (l.alimentos as String?)?.trim().isNotEmpty ?? false)
+            .length;
+        var sintomasHoje = 0;
+        for (final l in logsDeHoje) {
+          final efeitos = l.efeitosColaterais as String?;
+          if (efeitos == null || efeitos.isEmpty) continue;
+          try {
+            final j = jsonDecode(efeitos);
+            if (j is Map && j['sintomas'] is List) {
+              sintomasHoje += (j['sintomas'] as List).length;
+            }
+          } catch (_) {}
+        }
+        final deltaPeso = (pesoAtual != null && pesoAnterior != null)
+            ? pesoAtual - pesoAnterior
+            : null;
+        final aguaPct = (metaAguaMl != null && metaAguaMl > 0)
+            ? (consumidoAguaMl / metaAguaMl * 100).clamp(0, 999).round()
+            : null;
+
         return RefreshIndicator(
           onRefresh: () async {
             await Future.wait([
@@ -1202,7 +1234,88 @@ class _HomePageState extends State<HomePage> {
                 // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
                 const SizedBox(height: 16),
-                // 4) Celebração — score + streak
+                // 4) HERO — grid 2×2 de EixoCards (Lote 26)
+                //    Cada card mostra o estado real do dia e leva pra
+                //    ação/detalhe. Visual estilo Samsung Health.
+                Row(
+                  children: [
+                    Expanded(
+                      child: EixoCard(
+                        eixo: EixoRecorpo.refeicao,
+                        titulo: 'Refeições',
+                        valor: refeicoesHoje == 0 ? '—' : '$refeicoesHoje',
+                        subtitulo: refeicoesHoje == 0
+                            ? 'Nenhuma hoje'
+                            : refeicoesHoje == 1
+                                ? '1 registrada hoje'
+                                : '$refeicoesHoje registradas hoje',
+                        rodape: 'Toque para escanear',
+                        onTap: () => abrirFluxoRefeicao(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: EixoCard(
+                        eixo: EixoRecorpo.agua,
+                        titulo: 'Água',
+                        valor: consumidoAguaMl == 0
+                            ? '0'
+                            : '${(consumidoAguaMl / 1000).toStringAsFixed(1)}L',
+                        subtitulo: aguaPct == null
+                            ? 'Sem meta'
+                            : '$aguaPct% da meta',
+                        rodape: 'Toque para adicionar',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const LogDailyPage()),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: EixoCard(
+                        eixo: EixoRecorpo.peso,
+                        titulo: 'Peso',
+                        valor: pesoAtual == null
+                            ? '—'
+                            : '${pesoAtual.toStringAsFixed(1)}',
+                        subtitulo: pesoAtual == null
+                            ? 'Sem registro'
+                            : deltaPeso == null
+                                ? 'kg (primeiro registro)'
+                                : deltaPeso < 0
+                                    ? 'kg · ${deltaPeso.toStringAsFixed(1)} vs último'
+                                    : 'kg · +${deltaPeso.toStringAsFixed(1)} vs último',
+                        rodape: 'Toque para registrar',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const LogDailyPage()),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: EixoCard(
+                        eixo: EixoRecorpo.sintomas,
+                        titulo: 'Sintomas',
+                        valor: sintomasHoje == 0 ? 'OK' : '$sintomasHoje',
+                        subtitulo: sintomasHoje == 0
+                            ? 'Nada registrado hoje'
+                            : sintomasHoje == 1
+                                ? '1 registrado hoje'
+                                : '$sintomasHoje registrados hoje',
+                        rodape: 'Como você está?',
+                        onTap: () => abrirSymptomsSheet(context),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // 5) Consistência — streak + score
                 Row(
                   children: [
                     Expanded(
@@ -1270,16 +1383,6 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 16),
                 // 9) Scanners (ferramentas mais avançadas)
                 _ScannersRow(),
-                const SizedBox(height: 16),
-                // 9.5) Sintomas — card estilo Samsung Health (Lote 25)
-                EixoCard(
-                  eixo: EixoRecorpo.sintomas,
-                  titulo: 'Como você está?',
-                  valor: 'Registrar',
-                  subtitulo: 'Náusea, dor, tontura…',
-                  rodape: 'Toque para abrir os sintomas',
-                  onTap: () => abrirSymptomsSheet(context),
-                ),
                 const SizedBox(height: 16),
                 // 10) Análise longa — gráfico de 28 dias
                 if (logsProvider.scores.isNotEmpty)
@@ -1382,29 +1485,28 @@ class _DicaDoDiaHumana extends StatelessWidget {
   }
 }
 
+/// Lote 21 + 25 — Fluxo completo de escanear refeição.
+/// Extraído para top-level para poder ser reusado (EixoCard do Hero + botão
+/// da linha _ScannersRow).
+Future<void> abrirFluxoRefeicao(BuildContext context) async {
+  final foto = await Navigator.of(context).push<XFile?>(
+    MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
+  );
+  if (foto == null || !context.mounted) return;
+  final descricao = await Navigator.of(context).push<String?>(
+    MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
+  );
+  if (!context.mounted || descricao == null) return;
+  Future.delayed(const Duration(milliseconds: 500), () {
+    if (!context.mounted) return;
+    abrirSymptomsSheet(context,
+        contexto: descricao.isEmpty ? null : 'Após: $descricao');
+  });
+}
+
 /// Dois botões de scanner lado a lado: refeição (câmera do Lote 9) e
 /// prescrição (OCR do Lote 10). Ambos abrem tela cheia.
 class _ScannersRow extends StatelessWidget {
-  Future<void> _abrirRefeicao(BuildContext context) async {
-    // Lote 21 — Depois de capturar, empurra pra MealResultScreen (IA
-    // local + backend). Se o usuário cancelou a câmera, foto == null.
-    final foto = await Navigator.of(context).push<XFile?>(
-      MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
-    );
-    if (foto == null || !context.mounted) return;
-    // Meal result devolve a descrição registrada (ou null se cancelou).
-    final descricao = await Navigator.of(context).push<String?>(
-      MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
-    );
-    if (!context.mounted || descricao == null) return;
-    // Lote 25 — Prompt pós-refeição. Contexto vai como pill no sheet.
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!context.mounted) return;
-      abrirSymptomsSheet(context,
-          contexto: descricao.isEmpty ? null : 'Após: $descricao');
-    });
-  }
-
   void _abrirPrescricao(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const DietScannerScreen()),
@@ -1423,7 +1525,7 @@ class _ScannersRow extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => _abrirRefeicao(context),
+            onPressed: () => abrirFluxoRefeicao(context),
             icon: const Icon(Icons.camera_alt_outlined, size: 18),
             label: const Text('Refeição',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
