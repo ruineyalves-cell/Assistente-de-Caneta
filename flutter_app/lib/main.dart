@@ -1098,6 +1098,10 @@ class _HomePageState extends State<HomePage> {
   // Lote 32.4 — Alertas clínicos objetivos (sintoma persistente etc.).
   List<Map<String, dynamic>> _alertas = const [];
 
+  // Lote 32.3 — Resumo diário determinístico. Se backend falha, o
+  // widget cai no fallback local (dica genérica).
+  Map<String, dynamic>? _resumoDiario;
+
   @override
   void initState() {
     super.initState();
@@ -1216,6 +1220,15 @@ class _HomePageState extends State<HomePage> {
       // Backend indisponível — dashboard segue sem banner.
     }
 
+    // Lote 32.3 — Resumo diário. Falha silenciosa: widget cai no
+    // fallback local (dica genérica).
+    Map<String, dynamic>? resumoDiario;
+    try {
+      resumoDiario = await auth.apiService.obterResumoDiario();
+    } catch (_) {
+      resumoDiario = null;
+    }
+
     if (!mounted) return;
     setState(() {
       _eixo = eixo;
@@ -1227,6 +1240,7 @@ class _HomePageState extends State<HomePage> {
       _lembreteDoseMinuto = lembreteMinuto;
       _health = healthResumo;
       _alertas = alertas;
+      _resumoDiario = resumoDiario;
       _contextoCarregado = true;
     });
 
@@ -1527,9 +1541,11 @@ class _HomePageState extends State<HomePage> {
                 //    concordância de gênero.
                 _SaudacaoHumana(genero: _genero),
                 const SizedBox(height: 12),
-                // 2) Dica do dia — pool com concordância de gênero,
-                //    determinística por data.
-                _DicaDoDiaHumana(genero: _genero),
+                // 2) Lote 32.3 — Resumo diário do backend, com fallback
+                //    para a antiga dica local se o backend não respondeu.
+                _resumoDiario != null
+                    ? _ResumoDoDiaCard(resumo: _resumoDiario!)
+                    : _DicaDoDiaHumana(genero: _genero),
                 const SizedBox(height: 16),
                 // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
@@ -1852,6 +1868,117 @@ class _SaudacaoHumana extends StatelessWidget {
           Text(saudacao.subtitulo,
               style: TextStyle(
                   fontSize: 13, color: Colors.grey.shade700, height: 1.4)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lote 32.3 — Card de resumo diário do backend. Substitui a antiga
+/// _DicaDoDiaHumana quando o resumo do dia está disponível.
+///
+/// Renderiza cada linha do resumo em um bullet com cor por tipo, sem
+/// juízo. É um simples relato do que já foi registrado hoje + metas
+/// pendentes.
+class _ResumoDoDiaCard extends StatelessWidget {
+  final Map<String, dynamic> resumo;
+  const _ResumoDoDiaCard({required this.resumo});
+
+  static Color _corPorTipo(String tipo) {
+    switch (tipo) {
+      case 'refeicao':
+        return RecorpoColors.eixoRefeicao;
+      case 'agua':
+        return RecorpoColors.eixoAgua;
+      case 'peso':
+        return RecorpoColors.eixoPeso;
+      case 'sintomas':
+        return RecorpoColors.eixoSintomas;
+      case 'dose':
+        return RecorpoColors.primary;
+      case 'dica':
+      default:
+        return RecorpoColors.confirma;
+    }
+  }
+
+  static IconData _iconePorTipo(String tipo) {
+    switch (tipo) {
+      case 'refeicao':
+        return Icons.restaurant_outlined;
+      case 'agua':
+        return Icons.water_drop_outlined;
+      case 'peso':
+        return Icons.monitor_weight_outlined;
+      case 'sintomas':
+        return Icons.medical_services_outlined;
+      case 'dose':
+        return Icons.vaccines_outlined;
+      case 'dica':
+      default:
+        return Icons.wb_sunny_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final linhas = ((resumo['linhas'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+    final vazio = resumo['vazio'] == true;
+    return Container(
+      padding: const EdgeInsets.all(RecorpoSpacing.md),
+      decoration: BoxDecoration(
+        color: RecorpoColors.confirma.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+        border: Border.all(
+          color: RecorpoColors.confirma.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(vazio ? Icons.wb_sunny_outlined : Icons.today_outlined,
+                  size: 16, color: RecorpoColors.confirma),
+              const SizedBox(width: 6),
+              Text(
+                'RESUMO DE HOJE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2,
+                  color: RecorpoColors.confirma,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...linhas.map((l) {
+            final tipo = (l['tipo'] as String?) ?? 'dica';
+            final texto = (l['texto'] as String?) ?? '';
+            final cor = _corPorTipo(tipo);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(_iconePorTipo(tipo), size: 16, color: cor),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      texto,
+                      style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: scheme.onSurface.withValues(alpha: 0.9)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

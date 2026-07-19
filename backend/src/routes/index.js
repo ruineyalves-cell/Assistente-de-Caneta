@@ -41,6 +41,8 @@ r.get('/pacientes/perfil', ...paciente, audit('read', 'patient_profile'), patien
 r.get('/pacientes/pre-consulta', ...paciente, audit('read', 'pre_consulta'), patient.preConsulta);
 // Lote 32.4 — Alertas clínicos objetivos (sintoma persistente etc.).
 r.get('/pacientes/alertas', ...paciente, audit('read', 'alertas'), patient.alertas);
+// Lote 32.3 — Resumo diário determinístico.
+r.get('/pacientes/resumo-diario', ...paciente, audit('read', 'resumo_diario'), patient.resumoDiario);
 r.get('/pacientes/profissionais', ...paciente, patient.listarProfissionais);
 r.post('/pacientes/profissionais', ...paciente, patient.convidarProfissional);
 r.delete('/pacientes/profissionais/:id', ...paciente, patient.revogarProfissional);

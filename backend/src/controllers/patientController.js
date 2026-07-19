@@ -8,6 +8,7 @@ const db = require('../config/db');
 const { calcularFatos } = require('../utils/preConsulta');
 const { selecionarPerguntas } = require('../utils/perguntasPreConsulta');
 const { calcularAlertas } = require('../utils/alertas');
+const { calcularResumo } = require('../utils/resumoDiario');
 
 // Lote 31 — enums espelham lib/models/patient_profile.dart no cliente.
 // Mantidos como strings livres (VARCHAR) porque a lista pode evoluir
@@ -178,4 +179,31 @@ async function alertas(req, res, next) {
   }
 }
 
-module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta, alertas };
+/**
+ * GET /api/pacientes/resumo-diario
+ *
+ * Lote 32.3 — Resumo do dia determinístico. Sem IA.
+ * Retorna: { saudacao, dataRef, vazio, linhas: [{tipo, texto}] }.
+ */
+async function resumoDiario(req, res, next) {
+  try {
+    const hoje = new Date();
+    const dataRef = hoje.toISOString().slice(0, 10);
+    const [perfil, logHoje, logsRecentes] = await Promise.all([
+      patientModel.perfil(req.user.id),
+      dailyLogModel.porData(req.user.id, dataRef),
+      dailyLogModel.listar(req.user.id, { limite: 7 }),
+    ]);
+    const resumo = calcularResumo({
+      perfil,
+      logHoje,
+      logsRecentes,
+      agora: hoje,
+    });
+    return res.json(resumo);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta, alertas, resumoDiario };
