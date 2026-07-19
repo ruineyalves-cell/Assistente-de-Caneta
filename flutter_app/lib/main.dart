@@ -11,10 +11,12 @@ import 'screens/disclaimer_screen.dart';
 import 'screens/profile_config_screen.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'services/feature_usage_service.dart';
 import 'services/logs_provider.dart';
 import 'services/premium_service.dart';
 import 'services/theme_controller.dart';
 import 'utils/theme.dart';
+import 'widgets/quota_exceeded_sheet.dart';
 import 'widgets/score_card.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
@@ -1240,17 +1242,39 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Expanded(
-                      child: EixoCard(
-                        eixo: EixoRecorpo.refeicao,
-                        titulo: 'Refeições',
-                        valor: refeicoesHoje == 0 ? '—' : '$refeicoesHoje',
-                        subtitulo: refeicoesHoje == 0
-                            ? 'Nenhuma hoje'
-                            : refeicoesHoje == 1
-                                ? '1 registrada hoje'
-                                : '$refeicoesHoje registradas hoje',
-                        rodape: 'Toque para escanear',
-                        onTap: () => abrirFluxoRefeicao(context),
+                      child: Consumer<PremiumService>(
+                        builder: (ctx, premium, _) => FutureBuilder<int?>(
+                          future: FeatureUsageService().restante(
+                              Feature.cameraRefeicao,
+                              premium: premium.isPremium),
+                          builder: (ctx, snap) {
+                            final restante = snap.data;
+                            String rodape;
+                            if (premium.isPremium) {
+                              rodape = 'Toque para escanear';
+                            } else if (restante == null) {
+                              rodape = 'Toque para escanear';
+                            } else if (restante == 0) {
+                              rodape = 'Grátis usado · toque';
+                            } else {
+                              rodape =
+                                  'Grátis: $restante ${restante == 1 ? "restante" : "restantes"}';
+                            }
+                            return EixoCard(
+                              eixo: EixoRecorpo.refeicao,
+                              titulo: 'Refeições',
+                              valor:
+                                  refeicoesHoje == 0 ? '—' : '$refeicoesHoje',
+                              subtitulo: refeicoesHoje == 0
+                                  ? 'Nenhuma hoje'
+                                  : refeicoesHoje == 1
+                                      ? '1 registrada hoje'
+                                      : '$refeicoesHoje registradas hoje',
+                              rodape: rodape,
+                              onTap: () => abrirFluxoRefeicao(context),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1485,14 +1509,42 @@ class _DicaDoDiaHumana extends StatelessWidget {
   }
 }
 
-/// Lote 21 + 25 — Fluxo completo de escanear refeição.
+/// Lote 21 + 25 + 27 — Fluxo completo de escanear refeição.
 /// Extraído para top-level para poder ser reusado (EixoCard do Hero + botão
-/// da linha _ScannersRow).
+/// da linha _ScannersRow). Lote 27 acrescentou o gate de quota Free:
+/// se o usuário Grátis passou de 3 fotos no dia, mostra o
+/// QuotaExceededSheet ofertando Premium em vez de abrir a câmera.
 Future<void> abrirFluxoRefeicao(BuildContext context) async {
+  final premium = context.read<PremiumService>();
+  final uso = FeatureUsageService();
+  final podeUsar = await uso.podeConsumir(
+    Feature.cameraRefeicao,
+    premium: premium.isPremium,
+  );
+
+  if (!context.mounted) return;
+  if (!podeUsar) {
+    final quota = FeaturePolicy.quotaFree(Feature.cameraRefeicao)!;
+    await mostrarQuotaExcedida(
+      context,
+      feature: Feature.cameraRefeicao,
+      eixo: EixoRecorpo.refeicao,
+      tituloFeature: 'escanear refeição',
+      limite: quota.limite,
+      periodoLabel: 'hoje',
+    );
+    return;
+  }
+
   final foto = await Navigator.of(context).push<XFile?>(
     MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
   );
   if (foto == null || !context.mounted) return;
+  // Só conta o uso depois que a câmera efetivamente retornou uma foto —
+  // cancelar antes de tirar não gasta cota.
+  await uso.incrementar(Feature.cameraRefeicao, premium: premium.isPremium);
+
+  if (!context.mounted) return;
   final descricao = await Navigator.of(context).push<String?>(
     MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
   );
