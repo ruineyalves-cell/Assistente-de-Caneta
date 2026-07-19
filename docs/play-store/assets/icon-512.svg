@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Recorpo — App icon 512×512</title>
+  <defs>
+    <!-- Gradiente principal do fundo (azul-clínico com profundidade) -->
+    <radialGradient id="bg" cx="30%" cy="20%" r="120%">
+      <stop offset="0%" stop-color="#5AA0E0" />
+      <stop offset="35%" stop-color="#2B6CB0" />
+      <stop offset="100%" stop-color="#123B70" />
+    </radialGradient>
+    <!-- Anel exterior sutil (halo) -->
+    <radialGradient id="halo" cx="50%" cy="50%" r="55%">
+      <stop offset="70%" stop-color="rgba(255,255,255,0)" />
+      <stop offset="88%" stop-color="rgba(255,255,255,0.10)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </radialGradient>
+    <!-- Gradiente do "líquido" dentro da cápsula -->
+    <linearGradient id="liquido" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7FB3EA" />
+      <stop offset="100%" stop-color="#2B6CB0" />
+    </linearGradient>
+    <!-- Brilho superior do ícone -->
+    <linearGradient id="brilho" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.35)" />
+      <stop offset="60%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+    <!-- Sombra interna (dá volume no letreiro) -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
+      <feOffset dx="0" dy="4" result="off" />
+      <feFlood flood-color="#000000" flood-opacity="0.25" />
+      <feComposite in2="off" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <clipPath id="rounded">
+      <!-- Máscara adaptativa do Android (canto ~22% do lado, safe zone) -->
+      <rect x="0" y="0" width="512" height="512" rx="112" ry="112" />
+    </clipPath>
+  </defs>
+
+  <!-- Fundo com cantos arredondados (Play Store aceita square, adaptive icon corta) -->
+  <g clip-path="url(#rounded)">
+    <rect width="512" height="512" fill="url(#bg)" />
+
+    <!-- Halo suave -->
+    <circle cx="256" cy="256" r="240" fill="url(#halo)" />
+
+    <!-- Brilho superior (glass) -->
+    <path d="M0,0 H512 V220 Q256,320 0,220 Z" fill="url(#brilho)" />
+
+    <!-- Cápsula estilizada (verticalmente centralizada, com miolo de líquido) -->
+    <g transform="translate(256 256)">
+      <!-- Botão âmbar superior (dá o toque de "caneta") -->
+      <ellipse cx="0" cy="-158" rx="52" ry="30" fill="#F1C87C" />
+      <rect x="-46" y="-148" width="92" height="14" rx="6" fill="#E9A03C" />
+
+      <!-- Corpo da "cápsula" -->
+      <rect x="-72" y="-124" width="144" height="248" rx="34" ry="34"
+            fill="rgba(255,255,255,0.14)"
+            stroke="rgba(255,255,255,0.35)" stroke-width="1.5" />
+
+      <!-- Líquido interno -->
+      <rect x="-52" y="-104" width="104" height="208" rx="24" ry="24"
+            fill="url(#liquido)" opacity="0.92" />
+
+      <!-- Marcadores de dose (3 anéis brancos finos) -->
+      <line x1="-72" y1="-40" x2="72" y2="-40" stroke="rgba(255,255,255,0.4)" stroke-width="1.8" />
+      <line x1="-72" y1="10"  x2="72" y2="10"  stroke="rgba(255,255,255,0.4)" stroke-width="1.8" />
+      <line x1="-72" y1="60"  x2="72" y2="60"  stroke="rgba(255,255,255,0.4)" stroke-width="1.8" />
+
+      <!-- Letra R estilizada, integrada ao líquido (símbolo forte da marca) -->
+      <g filter="url(#glow)">
+        <text x="0" y="34" text-anchor="middle"
+              font-family="Georgia, 'Times New Roman', serif"
+              font-size="180" font-weight="700"
+              fill="#FFFFFF" font-style="italic">R</text>
+      </g>
+
+      <!-- Base -->
+      <rect x="-56" y="124" width="112" height="30" rx="10" ry="10" fill="#0B1220" />
+
+      <!-- Agulha (pequena, discreta) -->
+      <polygon points="-6,160 6,160 0,178" fill="#E1EAF5" />
+    </g>
+  </g>
+</svg>

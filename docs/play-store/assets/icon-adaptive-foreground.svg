@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Recorpo — Adaptive icon foreground (108dp safe zone)</title>
+  <!--
+    Foreground do adaptive icon do Android. O sistema aplica o fundo
+    (icon-adaptive-background.svg) e recorta em máscaras arbitrárias
+    (círculo, squircle, teardrop). Todo conteúdo relevante precisa
+    estar dentro do círculo central de 66% do lado (safe zone).
+  -->
+  <defs>
+    <linearGradient id="liquido" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7FB3EA" />
+      <stop offset="100%" stop-color="#2B6CB0" />
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
+      <feOffset dx="0" dy="3" result="off" />
+      <feFlood flood-color="#000000" flood-opacity="0.28" />
+      <feComposite in2="off" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Caneta centralizada, dentro do safe zone (raio 168) -->
+  <g transform="translate(256 256)">
+    <!-- Botão âmbar -->
+    <ellipse cx="0" cy="-118" rx="42" ry="24" fill="#F1C87C" />
+    <rect x="-38" y="-108" width="76" height="12" rx="5" fill="#E9A03C" />
+
+    <!-- Cápsula transparente -->
+    <rect x="-58" y="-92" width="116" height="200" rx="28" ry="28"
+          fill="rgba(255,255,255,0.16)"
+          stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+
+    <!-- Líquido -->
+    <rect x="-42" y="-76" width="84" height="168" rx="20" ry="20"
+          fill="url(#liquido)" opacity="0.95" />
+
+    <!-- Marcadores de dose -->
+    <line x1="-58" y1="-30" x2="58" y2="-30" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" />
+    <line x1="-58" y1="10"  x2="58" y2="10"  stroke="rgba(255,255,255,0.5)" stroke-width="1.6" />
+    <line x1="-58" y1="50"  x2="58" y2="50"  stroke="rgba(255,255,255,0.5)" stroke-width="1.6" />
+
+    <!-- Letra R -->
+    <g filter="url(#softShadow)">
+      <text x="0" y="26" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif"
+            font-size="150" font-weight="700"
+            fill="#FFFFFF" font-style="italic">R</text>
+    </g>
+
+    <!-- Base -->
+    <rect x="-46" y="108" width="92" height="24" rx="8" ry="8" fill="#0B1220" />
+
+    <!-- Agulha -->
+    <polygon points="-5,132 5,132 0,148" fill="#E1EAF5" />
+  </g>
+</svg>
