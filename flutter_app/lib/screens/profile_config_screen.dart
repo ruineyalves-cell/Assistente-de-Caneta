@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/patient_profile.dart';
+import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
 import '../services/premium_service.dart';
 import '../services/theme_controller.dart';
 import '../utils/constants.dart';
 import '../utils/theme.dart';
+import 'app_lock_setup_screen.dart';
 import 'paywall_screen.dart';
 
 /// Tela do Perfil / Matriz Metabólica (Lote 5).
@@ -515,6 +517,9 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            // Lote 32.5 — Segurança do app (PIN + biometria).
+            const _CardAppLock(),
+            const SizedBox(height: 16),
             const _CardPremium(),
             const SizedBox(height: 16),
             const _CardAparencia(),
@@ -579,6 +584,165 @@ class _CardAparencia extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Lote 32.5 — Cartão de segurança do app (PIN + biometria).
+///
+/// Estado ligado: mostra timeout selecionado + botão desativar (pede PIN
+/// atual). Estado desligado: CTA para abrir setup.
+class _CardAppLock extends StatelessWidget {
+  const _CardAppLock();
+
+  static String _rotuloTimeout(int seg) {
+    switch (seg) {
+      case 0:
+        return 'bloqueio imediato';
+      case 60:
+        return 'após 1 minuto';
+      case 300:
+        return 'após 5 minutos';
+      case 900:
+        return 'após 15 minutos';
+      default:
+        return 'após ${seg}s';
+    }
+  }
+
+  Future<void> _desativar(BuildContext context) async {
+    final lock = context.read<AppLockService>();
+    final pinCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Desativar bloqueio'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Digite seu PIN atual para desativar.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pinCtrl,
+              autofocus: true,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                counterText: '',
+                border: OutlineInputBorder(),
+                hintText: '••••',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Desativar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await lock.desativar(pinCtrl.text);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bloqueio desativado.')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PIN incorreto.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lock = context.watch<AppLockService>();
+    final scheme = Theme.of(context).colorScheme;
+    final ativado = lock.configurado;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: scheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: RecorpoGradients.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.lock_outline,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bloqueio do app',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface)),
+                    const SizedBox(height: 2),
+                    Text(
+                      ativado
+                          ? 'Ativo · ${_rotuloTimeout(lock.timeoutSeg)}${lock.biometriaHabilitada ? ' · biometria' : ''}'
+                          : 'Proteja dados sensíveis com PIN e biometria.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ativado
+                    ? OutlinedButton(
+                        onPressed: () => _desativar(context),
+                        child: const Text('Desativar'),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const AppLockSetupScreen()),
+                        ),
+                        icon: const Icon(Icons.lock_outline, size: 18),
+                        label: const Text('Ativar bloqueio'),
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -11,6 +11,8 @@ import 'screens/disclaimer_screen.dart';
 import 'screens/dose_reminder_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/profile_config_screen.dart';
+import 'screens/app_lock_screen.dart';
+import 'services/app_lock_service.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/feature_usage_service.dart';
@@ -63,6 +65,10 @@ void main() async {
   final themeController = ThemeController();
   await themeController.inicializar();
 
+  // Lote 32.5 — App lock (PIN + biometria). Se PIN não configurado,
+  // o serviço carrega vazio e o gate no MyApp não mostra AppLockScreen.
+  final appLockService = await AppLockService.criar();
+
   final prefs = await SharedPreferences.getInstance();
   final disclaimerAceito =
       prefs.getBool(AppConstants.keyDisclaimerAceito) ?? false;
@@ -95,6 +101,7 @@ void main() async {
     authService: authService,
     premiumService: premiumService,
     themeController: themeController,
+    appLockService: appLockService,
     disclaimerAceitoInicial: disclaimerAceito,
     onboardingCompletoInicial: onboardingCompleto,
     initialWidgetUri: initialUri,
@@ -105,6 +112,7 @@ class MyApp extends StatefulWidget {
   final AuthService authService;
   final PremiumService premiumService;
   final ThemeController themeController;
+  final AppLockService appLockService;
   final bool disclaimerAceitoInicial;
   final bool onboardingCompletoInicial;
 
@@ -118,6 +126,7 @@ class MyApp extends StatefulWidget {
     required this.authService,
     required this.premiumService,
     required this.themeController,
+    required this.appLockService,
     required this.disclaimerAceitoInicial,
     required this.onboardingCompletoInicial,
     this.initialWidgetUri,
@@ -127,7 +136,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late bool _disclaimerAceito;
   late bool _onboardingCompleto;
   final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
@@ -138,9 +147,26 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _disclaimerAceito = widget.disclaimerAceitoInicial;
     _onboardingCompleto = widget.onboardingCompletoInicial;
-    // Caso o disclaimer já esteja aceito e o app tenha sido lançado
-    // pelo widget, agenda a navegação para depois do primeiro frame.
+    WidgetsBinding.instance.addObserver(this);
     if (_disclaimerAceito) _talvezAbrirTelaDoWidget();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Lote 32.5 — auto-lock por inatividade.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      widget.appLockService.marcarBackground();
+    } else if (state == AppLifecycleState.resumed) {
+      widget.appLockService.avaliarForeground();
+    }
   }
 
   void _onDisclaimerAceito() {
@@ -180,6 +206,9 @@ class _MyAppState extends State<MyApp> {
             value: widget.premiumService),
         ChangeNotifierProvider<ThemeController>.value(
             value: widget.themeController),
+        // Lote 32.5 — App lock (PIN/biometria).
+        ChangeNotifierProvider<AppLockService>.value(
+            value: widget.appLockService),
         // LogsProvider é um ChangeNotifier — precisa ser exposto via
         // ChangeNotifierProxyProvider para que os widgets escutem
         // notifyListeners(). Reaproveita a instância entre rebuilds e só
@@ -207,8 +236,14 @@ class _MyAppState extends State<MyApp> {
           darkTheme: RecorpoTheme.dark(),
           themeMode: themeController.mode,
           home: _disclaimerAceito
-              ? Consumer<AuthService>(
-                  builder: (context, authService, _) {
+              ? Consumer2<AuthService, AppLockService>(
+                  builder: (context, authService, appLock, _) {
+                    // Lote 32.5 — Gate de bloqueio na frente de tudo pra
+                    // proteger dados de saúde quando o app volta do
+                    // background após inatividade.
+                    if (appLock.configurado && appLock.travado) {
+                      return const AppLockScreen();
+                    }
                     if (!authService.isAuthenticated) {
                       return const LoginPage();
                     }

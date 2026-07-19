@@ -68,6 +68,11 @@ dependencies:
   # Lote 21 — Reconhecimento de comida na foto (roda on-device, sem chave)
   google_mlkit_image_labeling: ^0.13.0
 
+  # Lote 32.5 — App lock com PIN + biometria (fingerprint/face).
+  # crypto para hash SHA-256 do PIN (nunca guardar em texto claro).
+  local_auth: ^2.3.0
+  crypto: ^3.0.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
