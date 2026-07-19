@@ -27,6 +27,11 @@ class NotificationService {
   static const int _idRegistroDia = 1002;
   static const int _idCelebracao = 1003;
   static const int _idProximaDose = 1004;
+  // Lote 30 — Lembrete semanal recorrente da dose GLP-1. Dois IDs
+  // separados: um pra véspera às 20h ("prepare a caneta") e outro
+  // pro dia da aplicação no horário escolhido pelo usuário.
+  static const int _idDoseSemanaVespera = 1005;
+  static const int _idDoseSemanaDia = 1006;
 
   bool get suportado => !kIsWeb;
 
@@ -191,6 +196,85 @@ class NotificationService {
         preciseAlarm: true,
       ),
     );
+  }
+
+  /// Lote 30 — Agenda o lembrete semanal da dose. Cria dois alertas
+  /// recorrentes:
+  ///
+  ///  1. Véspera às 20h ("prepare a caneta") — para o usuário deixar
+  ///     a medicação em temperatura ambiente e a rotina organizada.
+  ///  2. Dia da aplicação no horário escolhido — a hora exata em que
+  ///     o usuário costuma aplicar.
+  ///
+  /// [weekday] usa a convenção do `DateTime` (1=segunda, 7=domingo).
+  /// [hour]/[minute] são a hora local da aplicação. Chamar novamente
+  /// substitui os agendamentos anteriores.
+  Future<void> agendarDoseSemanal({
+    required int weekday,
+    required int hour,
+    required int minute,
+    required String? primeiroNome,
+    required String? medicamento,
+  }) async {
+    if (!suportado) return;
+    await inicializar();
+    await AwesomeNotifications().cancel(_idDoseSemanaVespera);
+    await AwesomeNotifications().cancel(_idDoseSemanaDia);
+
+    final nome = _saudarNome(primeiroNome);
+    final med = (medicamento ?? '').trim();
+    final medRotulo = med.isEmpty ? 'sua medicação' : med;
+
+    // Véspera: weekday-1 (dá a volta em domingo).
+    final vespera = weekday == 1 ? 7 : weekday - 1;
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idDoseSemanaVespera,
+        channelKey: _canalDose,
+        title: 'Amanhã é dia da aplicação 💉',
+        body:
+            '$nome, tire $medRotulo da geladeira 30 min antes para deixar em '
+            'temperatura ambiente. Um dia mais tranquilo começa hoje.',
+        notificationLayout: NotificationLayout.Default,
+      ),
+      schedule: NotificationCalendar(
+        weekday: vespera,
+        hour: 20,
+        minute: 0,
+        second: 0,
+        repeats: true,
+        allowWhileIdle: true,
+        preciseAlarm: true,
+      ),
+    );
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idDoseSemanaDia,
+        channelKey: _canalDose,
+        title: 'Hora da sua aplicação 💉',
+        body:
+            '$nome, é o momento de aplicar $medRotulo. Respire fundo, faça no '
+            'ritmo que for confortável.',
+        notificationLayout: NotificationLayout.Default,
+      ),
+      schedule: NotificationCalendar(
+        weekday: weekday,
+        hour: hour,
+        minute: minute,
+        second: 0,
+        repeats: true,
+        allowWhileIdle: true,
+        preciseAlarm: true,
+      ),
+    );
+  }
+
+  Future<void> cancelarDoseSemanal() async {
+    if (!suportado) return;
+    await AwesomeNotifications().cancel(_idDoseSemanaVespera);
+    await AwesomeNotifications().cancel(_idDoseSemanaDia);
   }
 
   Future<void> cancelarDiarias() async {

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/disclaimer_screen.dart';
+import 'screens/dose_reminder_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/profile_config_screen.dart';
 import 'services/auth_service.dart';
@@ -1044,6 +1045,12 @@ class _HomePageState extends State<HomePage> {
   PerfilBackend? _perfil;
   bool _contextoCarregado = false;
 
+  // Lote 30 — Estado do lembrete semanal da dose.
+  bool _lembreteDoseHabilitado = false;
+  int _lembreteDoseWeekday = DateTime.thursday;
+  int _lembreteDoseHora = 9;
+  int _lembreteDoseMinuto = 0;
+
   @override
   void initState() {
     super.initState();
@@ -1053,6 +1060,9 @@ class _HomePageState extends State<HomePage> {
   Future<void> _carregarContexto() async {
     // Eixo (local + rápido) e perfil (backend) em paralelo. Falhas no
     // perfil não bloqueiam o render: só afetam a exibição das metas.
+    // Captura o service antes do primeiro await para evitar uso de
+    // BuildContext em async gap.
+    final auth = context.read<AuthService>();
     final prefs = await SharedPreferences.getInstance();
     final nome = prefs.getString(ProfilePrefsKeys.eixoFarmacologico);
     final eixo = nome == null
@@ -1067,9 +1077,19 @@ class _HomePageState extends State<HomePage> {
             .cast<IdentidadeGenero?>()
             .firstWhere((v) => v?.name == nomeGen, orElse: () => null);
 
+    // Lote 30 — Lembrete semanal da dose.
+    final lembreteHabilitado =
+        prefs.getBool(ProfilePrefsKeys.doseReminderEnabled) ?? false;
+    final lembreteWeekday =
+        prefs.getInt(ProfilePrefsKeys.doseReminderWeekday) ??
+            _lembreteDoseWeekday;
+    final lembreteHora =
+        prefs.getInt(ProfilePrefsKeys.doseReminderHour) ?? _lembreteDoseHora;
+    final lembreteMinuto = prefs.getInt(ProfilePrefsKeys.doseReminderMinute) ??
+        _lembreteDoseMinuto;
+
     PerfilBackend? perfil;
     try {
-      final auth = context.read<AuthService>();
       final json = await auth.apiService.obterPerfil();
       final perfilJson = json['perfil'] as Map<String, dynamic>?;
       if (perfilJson != null) {
@@ -1084,8 +1104,24 @@ class _HomePageState extends State<HomePage> {
       _eixo = eixo;
       _genero = genero;
       _perfil = perfil;
+      _lembreteDoseHabilitado = lembreteHabilitado;
+      _lembreteDoseWeekday = lembreteWeekday;
+      _lembreteDoseHora = lembreteHora;
+      _lembreteDoseMinuto = lembreteMinuto;
       _contextoCarregado = true;
     });
+
+    // Lote 30 — Se o usuário configurou lembrete e o app foi reinstalado
+    // ou reiniciado, reagenda para garantir persistência entre boots.
+    if (lembreteHabilitado && (eixo?.envolveMedicacao ?? false)) {
+      await NotificationService().agendarDoseSemanal(
+        weekday: lembreteWeekday,
+        hour: lembreteHora,
+        minute: lembreteMinuto,
+        primeiroNome: (auth.nome ?? '').trim().split(' ').first,
+        medicamento: perfil?.medicationNome,
+      );
+    }
 
     // Depois que perfil e logs estão carregados, sincronizamos o
     // widget de Água: (1) descarrega o que ele acumulou em background
@@ -1305,6 +1341,29 @@ class _HomePageState extends State<HomePage> {
                 // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
                 const SizedBox(height: 16),
+                // 3b) Lote 30 — Lembrete semanal da dose. Só aparece se
+                //     o eixo envolve medicação (não faz sentido em
+                //     recomposição natural).
+                if (_eixo?.envolveMedicacao ?? false) ...[
+                  _LembreteDoseCard(
+                    habilitado: _lembreteDoseHabilitado,
+                    weekday: _lembreteDoseWeekday,
+                    hora: _lembreteDoseHora,
+                    minuto: _lembreteDoseMinuto,
+                    nomeMedicamento: _perfil?.medicationNome,
+                    onAbrir: () async {
+                      final resultado = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => DoseReminderScreen(
+                            nomeMedicamento: _perfil?.medicationNome,
+                          ),
+                        ),
+                      );
+                      if (resultado == true) await _carregarContexto();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // 4) HERO — grid 2×2 de EixoCards (Lote 26)
                 //    Cada card mostra o estado real do dia e leva pra
                 //    ação/detalhe. Visual estilo Samsung Health.
@@ -1664,6 +1723,111 @@ class _ScannersRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lote 30 — Card de acesso ao lembrete semanal da dose. Aparece só
+/// quando o eixo envolve medicação. Sem configuração, mostra CTA de
+/// ativar; com configuração, mostra próximo dia/horário.
+class _LembreteDoseCard extends StatelessWidget {
+  final bool habilitado;
+  final int weekday;
+  final int hora;
+  final int minuto;
+  final String? nomeMedicamento;
+  final VoidCallback onAbrir;
+
+  const _LembreteDoseCard({
+    required this.habilitado,
+    required this.weekday,
+    required this.hora,
+    required this.minuto,
+    required this.nomeMedicamento,
+    required this.onAbrir,
+  });
+
+  static const _diaLongo = <int, String>{
+    DateTime.monday: 'Segunda',
+    DateTime.tuesday: 'Terça',
+    DateTime.wednesday: 'Quarta',
+    DateTime.thursday: 'Quinta',
+    DateTime.friday: 'Sexta',
+    DateTime.saturday: 'Sábado',
+    DateTime.sunday: 'Domingo',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final horaFmt =
+        '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}';
+    final subtitulo = habilitado
+        ? '${_diaLongo[weekday]} às $horaFmt · alerta na véspera'
+        : 'Toque para receber alertas na véspera e no dia';
+    final rotulo = habilitado ? 'Lembrete ativo' : 'Ativar lembrete da dose';
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+      onTap: onAbrir,
+      child: Container(
+        padding: const EdgeInsets.all(RecorpoSpacing.md),
+        decoration: BoxDecoration(
+          color: habilitado
+              ? scheme.primary.withValues(alpha: 0.08)
+              : scheme.surface,
+          borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+          border: Border.all(
+            color: habilitado
+                ? scheme.primary.withValues(alpha: 0.35)
+                : scheme.onSurface.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: RecorpoGradients.primary,
+                borderRadius: BorderRadius.circular(RecorpoSpacing.radiusSm),
+              ),
+              child: Icon(
+                habilitado
+                    ? Icons.notifications_active
+                    : Icons.notifications_none,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: RecorpoSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(rotulo,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface)),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitulo,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: scheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
