@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8099", "--web-hostname", "127.0.0.1"],
       "port": 8099,
       "cwd": "flutter_app"
+    },
+    {
+      "name": "recorpo-site",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3001,
+      "cwd": "web"
     }
   ]
 }

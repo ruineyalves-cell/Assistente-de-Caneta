@@ -26,3 +26,9 @@ Thumbs.db
 pgdata/
 uploads/
 relatorios/
+
+# Web (Next.js) — só ignora se ainda não estava aqui
+web/node_modules
+web/.next
+web/tsconfig.tsbuildinfo
+web/.env.local
