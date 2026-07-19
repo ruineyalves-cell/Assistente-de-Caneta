@@ -130,6 +130,12 @@ class PerfilBackend {
   final double metaProteinaGkg;
   final double metaAguaMlKg;
   final bool declarouPrescricao;
+  // Lote 31 — perfil estendido sincronizado (antes só em prefs).
+  final EixoFarmacologico? eixoFarmacologico;
+  final IdentidadeGenero? identidadeGenero;
+  final SexoBiologico? sexoBiologico;
+  final DateTime? ultimaDose;
+  final double? metaPesoKg;
 
   const PerfilBackend({
     this.medicationId,
@@ -140,10 +146,24 @@ class PerfilBackend {
     this.metaProteinaGkg = 1.20,
     this.metaAguaMlKg = 35.0,
     this.declarouPrescricao = false,
+    this.eixoFarmacologico,
+    this.identidadeGenero,
+    this.sexoBiologico,
+    this.ultimaDose,
+    this.metaPesoKg,
   });
 
   factory PerfilBackend.fromJson(Map<String, dynamic> json) {
     final medicacao = json['medicacao'] as Map<String, dynamic>?;
+    T? _enumDe<T extends Enum>(String? nome, List<T> vals) {
+      if (nome == null) return null;
+      for (final v in vals) {
+        if (v.name == nome) return v;
+      }
+      return null;
+    }
+
+    final ultimaDoseStr = json['ultimaDoseIso'] as String?;
     return PerfilBackend(
       medicationId: medicacao?['id'] as int?,
       medicationNome: medicacao?['nome'] as String?,
@@ -154,6 +174,14 @@ class PerfilBackend {
           (json['metaProteinaGkg'] as num?)?.toDouble() ?? 1.20,
       metaAguaMlKg: (json['metaAguaMlKg'] as num?)?.toDouble() ?? 35.0,
       declarouPrescricao: json['declarouPrescricao'] as bool? ?? false,
+      eixoFarmacologico: _enumDe<EixoFarmacologico>(
+          json['eixoFarmacologico'] as String?, EixoFarmacologico.values),
+      identidadeGenero: _enumDe<IdentidadeGenero>(
+          json['identidadeGenero'] as String?, IdentidadeGenero.values),
+      sexoBiologico: _enumDe<SexoBiologico>(
+          json['sexoBiologico'] as String?, SexoBiologico.values),
+      ultimaDose: ultimaDoseStr == null ? null : DateTime.tryParse(ultimaDoseStr),
+      metaPesoKg: (json['metaPesoKg'] as num?)?.toDouble(),
     );
   }
 

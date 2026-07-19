@@ -38,6 +38,13 @@ class AppConstants {
   // por usuário quando ele conclui as três etapas ou opta por pular.
   static const String keyOnboardingCompleto = 'onboarding_completo_v1';
 
+  // Lote 31 — Migração de prefs locais (eixo, identidade, sexo,
+  // ultimaDoseIso, metaPesoKg) para o backend. Roda uma única vez por
+  // instalação: se as prefs ainda existem e o backend não tem esses
+  // campos, envia via PUT /api/pacientes/perfil e marca a flag.
+  static const String keyPerfilMigradoParaBackendV1 =
+      'perfil_migrado_para_backend_v1';
+
   // Defaults
   static const double defaultMetaProteinaGkg = 1.2;
   static const double defaultMetaAguaMlkg = 35.0;

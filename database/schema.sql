@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS patient_profiles (
   meta_proteina_gkg   NUMERIC(4,2) NOT NULL DEFAULT 1.20,  -- diretriz pública geral (ABESO): 1.2–1.6 g/kg
   meta_agua_ml_kg     NUMERIC(5,2) NOT NULL DEFAULT 35.00, -- diretriz pública geral: ~35 ml/kg
   declarou_prescricao BOOLEAN NOT NULL DEFAULT false,
+  -- Lote 31 — Perfil estendido sincronizado (antes ficava só em prefs).
+  -- Sobrevive a troca de aparelho e desinstalação.
+  eixo_farmacologico  VARCHAR(40),   -- nome do enum EixoFarmacologico do cliente
+  identidade_genero   VARCHAR(30),   -- IdentidadeGenero.name
+  sexo_biologico      VARCHAR(30),   -- SexoBiologico.name
+  ultima_dose_iso     DATE,          -- data da última aplicação (ISO)
+  meta_peso_kg_enc    TEXT,          -- 🔒 sensível (mesmo padrão do peso inicial)
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
