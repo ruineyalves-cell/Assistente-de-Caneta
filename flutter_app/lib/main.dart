@@ -30,6 +30,8 @@ import 'services/greeting_service.dart';
 import 'services/daily_tip_service.dart';
 import 'services/water_widget_service.dart';
 import 'services/notification_service.dart';
+import 'services/health_connect_service.dart';
+import 'screens/health_hub_screen.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -1053,6 +1055,10 @@ class _HomePageState extends State<HomePage> {
   int _lembreteDoseHora = 9;
   int _lembreteDoseMinuto = 0;
 
+  // Lote 32.1 — Health Connect (passos, sono, peso via balança smart).
+  HealthResumoDia _health = HealthResumoDia.vazio;
+  final _healthService = HealthConnectService();
+
   @override
   void initState() {
     super.initState();
@@ -1144,6 +1150,22 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Lote 32.1 — Puxa passos, sono, peso e batimentos do Health
+    // Connect. Silencioso: se o plugin/permissão falhar, seguimos
+    // sem os dados. `temAutorizacao` evita pedir permissão em cada
+    // abertura — só pedimos no primeiro uso via HealthHubScreen.
+    HealthResumoDia healthResumo = HealthResumoDia.vazio;
+    if (_healthService.suportado) {
+      try {
+        final autorizado = await _healthService.temAutorizacao();
+        if (autorizado) {
+          healthResumo = await _healthService.resumoDeHoje();
+        }
+      } catch (_) {
+        // Plugin indisponível ou permissão negada — segue vazio.
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _eixo = eixo;
@@ -1153,6 +1175,7 @@ class _HomePageState extends State<HomePage> {
       _lembreteDoseWeekday = lembreteWeekday;
       _lembreteDoseHora = lembreteHora;
       _lembreteDoseMinuto = lembreteMinuto;
+      _health = healthResumo;
       _contextoCarregado = true;
     });
 
@@ -1280,6 +1303,46 @@ class _HomePageState extends State<HomePage> {
 
   bool _celebrouNestaSessao = false;
 
+  /// Lote 32.1 — Decide se deve mostrar o banner "importar peso auto".
+  /// Regra: Health Connect tem peso registrado hoje (a partir das 0h) E
+  /// o valor difere em ≥ 0.1 kg do último peso do app.
+  bool _deveOfertarImportarPeso(double? pesoAppUltimo) {
+    final pesoH = _health.pesoUltimoKg;
+    final quando = _health.pesoUltimoEm;
+    if (pesoH == null || quando == null) return false;
+    final hoje = DateTime.now();
+    final ehDeHoje = quando.year == hoje.year &&
+        quando.month == hoje.month &&
+        quando.day == hoje.day;
+    if (!ehDeHoje) return false;
+    if (pesoAppUltimo == null) return true;
+    return (pesoH - pesoAppUltimo).abs() >= 0.1;
+  }
+
+  Future<void> _importarPesoDeHealth() async {
+    final pesoH = _health.pesoUltimoKg;
+    if (pesoH == null) return;
+    try {
+      await context.read<LogsProvider>().adicionarLog(
+            data: DateTime.now(),
+            pesoKg: pesoH,
+            alimentos: 'Peso: ${pesoH.toStringAsFixed(1)} kg @ Balança smart',
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Peso ${pesoH.toStringAsFixed(1)} kg importado da balança smart.')),
+      );
+      await _carregarContexto();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao importar: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<LogsProvider>(
@@ -1386,6 +1449,18 @@ class _HomePageState extends State<HomePage> {
                 // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
                 const SizedBox(height: 16),
+                // 3a) Lote 32.1 — Banner "importar peso da balança smart"
+                //     Aparece só quando o Health Connect tem um peso mais
+                //     recente que o último log do app (delta > 24h ou peso
+                //     diferente do último).
+                if (_deveOfertarImportarPeso(pesoAtual))
+                  _BannerImportarPeso(
+                    pesoDeHealth: _health.pesoUltimoKg!,
+                    quando: _health.pesoUltimoEm!,
+                    onImportar: () => _importarPesoDeHealth(),
+                  ),
+                if (_deveOfertarImportarPeso(pesoAtual))
+                  const SizedBox(height: 12),
                 // 3b) Lote 30 — Lembrete semanal da dose. Só aparece se
                 //     o eixo envolve medicação (não faz sentido em
                 //     recomposição natural).
@@ -1512,6 +1587,43 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
+                // Lote 32.1 — 3ª linha só quando o Health Connect estiver
+                // com dados. Sem push tributário: usuário sem relógio nem
+                // percebe que existe (limpa o dashboard).
+                if (_health.temDados) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: EixoCard(
+                          eixo: EixoRecorpo.movimento,
+                          titulo: 'Movimento',
+                          valor: _health.passos == null
+                              ? '—'
+                              : _health.passos! >= 1000
+                                  ? '${(_health.passos! / 1000).toStringAsFixed(1)}k'
+                                  : '${_health.passos}',
+                          subtitulo: _health.passos == null
+                              ? 'Sem passos hoje'
+                              : _health.passos == 1
+                                  ? '1 passo'
+                                  : '${_health.passos} passos',
+                          rodape: _health.kcalAtivas == null
+                              ? 'Do seu relógio'
+                              : '${_health.kcalAtivas!.round()} kcal ativas',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const HealthHubScreen()),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CardSono(sonoMinutos: _health.sonoMinutos),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 20),
                 // 5) Consistência — streak + score
                 Row(
@@ -1769,6 +1881,177 @@ class _ScannersRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lote 32.1 — Banner que oferece importar o último peso lido do
+/// Health Connect (tipicamente vindo de uma balança smart) para o
+/// log do app. Reduz atrito: quem se pesa em balança Xiaomi/Withings
+/// não precisa redigitar o valor.
+class _BannerImportarPeso extends StatelessWidget {
+  final double pesoDeHealth;
+  final DateTime quando;
+  final VoidCallback onImportar;
+
+  const _BannerImportarPeso({
+    required this.pesoDeHealth,
+    required this.quando,
+    required this.onImportar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final horaFmt =
+        '${quando.hour.toString().padLeft(2, '0')}:${quando.minute.toString().padLeft(2, '0')}';
+    return InkWell(
+      borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+      onTap: onImportar,
+      child: Container(
+        padding: const EdgeInsets.all(RecorpoSpacing.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              RecorpoColors.eixoPeso.withValues(alpha: 0.16),
+              RecorpoColors.eixoPeso.withValues(alpha: 0.06),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+          border: Border.all(
+            color: RecorpoColors.eixoPeso.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: RecorpoGradients.peso,
+                borderRadius:
+                    BorderRadius.circular(RecorpoSpacing.radiusSm),
+              ),
+              child: const Icon(Icons.monitor_weight_outlined,
+                  color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: RecorpoSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sua balança smart marcou ${pesoDeHealth.toStringAsFixed(1)} kg',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Registrado às $horaFmt · toque para importar.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right,
+                color: scheme.onSurface.withValues(alpha: 0.5)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lote 32.1 — Card de sono do dashboard. Recebe minutos totais da
+/// sessão de sono anterior (do Health Connect) e apresenta em h/min +
+/// avaliação simples (curto/bom/longo) baseada em faixas OMS 7-9h.
+class _CardSono extends StatelessWidget {
+  final int? sonoMinutos;
+  const _CardSono({required this.sonoMinutos});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ehDark = Theme.of(context).brightness == Brightness.dark;
+
+    final min = sonoMinutos;
+    final valor = min == null
+        ? '—'
+        : min < 60
+            ? '${min}m'
+            : '${(min / 60).floor()}h${(min % 60).toString().padLeft(2, '0')}';
+    final subtitulo = min == null
+        ? 'Sem dado do relógio'
+        : min < 6 * 60
+            ? 'Curto (<6h)'
+            : min > 9 * 60
+                ? 'Longo (>9h)'
+                : 'Dentro da faixa OMS';
+    final rodape = min == null ? 'Conecte o Health Connect' : 'Ontem à noite';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ehDark
+            ? RecorpoColors.darkSurface
+            : RecorpoColors.lightSurface,
+        borderRadius: BorderRadius.circular(RecorpoSpacing.radiusXl),
+        border: Border.all(
+          color: scheme.onSurface.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.indigo.shade400,
+                  Colors.indigo.shade700,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(RecorpoSpacing.radiusSm),
+            ),
+            child: const Icon(Icons.bedtime_outlined,
+                color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: 12),
+          Text('Sono',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface.withValues(alpha: 0.65))),
+          const SizedBox(height: 4),
+          Text(valor,
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onSurface,
+                  height: 1)),
+          const SizedBox(height: 8),
+          Text(subtitulo,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withValues(alpha: 0.7))),
+          const SizedBox(height: 6),
+          Text(rodape,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: scheme.onSurface.withValues(alpha: 0.5))),
+        ],
+      ),
     );
   }
 }

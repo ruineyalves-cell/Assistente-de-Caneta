@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 
-/// Resumo do dia lido do Health Connect (Lote 11 + Lote 22).
+/// Resumo do dia lido do Health Connect (Lote 11 + Lote 22 + Lote 32.1).
 class HealthResumoDia {
   final int? bpmMedio;
   final int? bpmMax;
@@ -9,6 +9,10 @@ class HealthResumoDia {
   final int? passos;
   final double? pesoUltimoKg;
   final DateTime? pesoUltimoEm;
+  // Lote 32.1 — sono da noite anterior (minutos totais em sessão de
+  // sono). GLP-1 causa fadiga transitória; correlacionar com o resto
+  // do dia é útil pro médico.
+  final int? sonoMinutos;
   final int amostrasBpm;
   final int amostrasKcal;
 
@@ -19,6 +23,7 @@ class HealthResumoDia {
     this.passos,
     this.pesoUltimoKg,
     this.pesoUltimoEm,
+    this.sonoMinutos,
     this.amostrasBpm = 0,
     this.amostrasKcal = 0,
   });
@@ -27,7 +32,8 @@ class HealthResumoDia {
       amostrasBpm > 0 ||
       amostrasKcal > 0 ||
       (passos != null && passos! > 0) ||
-      pesoUltimoKg != null;
+      pesoUltimoKg != null ||
+      (sonoMinutos != null && sonoMinutos! > 0);
 
   static const vazio = HealthResumoDia();
 }
@@ -46,6 +52,8 @@ class HealthConnectService {
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.STEPS,
     HealthDataType.WEIGHT,
+    // Lote 32.1 — sono para correlacionar com fadiga GLP-1.
+    HealthDataType.SLEEP_ASLEEP,
   ];
 
   /// Indica se a plataforma corrente tem chance de expor Health Connect.
@@ -101,6 +109,15 @@ class HealthConnectService {
       endTime: agora,
     );
 
+    // Sono é uma sessão que geralmente cruza a meia-noite. Buscamos
+    // desde 21h da noite anterior até 12h do dia atual para pegar a
+    // sessão inteira, mesmo que o usuário tenha dormido tarde.
+    final pontosSono = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.SLEEP_ASLEEP],
+      startTime: DateTime(agora.year, agora.month, agora.day - 1, 21),
+      endTime: DateTime(agora.year, agora.month, agora.day, 12),
+    );
+
     final bpms = <double>[];
     double kcal = 0;
     var amostrasKcal = 0;
@@ -135,6 +152,15 @@ class HealthConnectService {
       }
     }
 
+    // Somamos a duração de todas as sessões de SLEEP_ASLEEP que caem
+    // no intervalo. O plugin `health` entrega cada sessão como um
+    // ponto com dateFrom/dateTo — a duração vem daí.
+    int sonoMinutosTotal = 0;
+    for (final p in pontosSono) {
+      final dur = p.dateTo.difference(p.dateFrom).inMinutes;
+      if (dur > 0) sonoMinutosTotal += dur;
+    }
+
     return HealthResumoDia(
       bpmMedio:
           bpms.isEmpty ? null : (bpms.reduce((a, b) => a + b) / bpms.length).round(),
@@ -143,6 +169,7 @@ class HealthConnectService {
       passos: passos == 0 ? null : passos,
       pesoUltimoKg: pesoUltimo,
       pesoUltimoEm: pesoUltimoEm,
+      sonoMinutos: sonoMinutosTotal == 0 ? null : sonoMinutosTotal,
       amostrasBpm: bpms.length,
       amostrasKcal: amostrasKcal,
     );
