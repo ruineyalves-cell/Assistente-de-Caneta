@@ -39,6 +39,8 @@ r.get('/pacientes/perfil', ...paciente, audit('read', 'patient_profile'), patien
 // Lote 32.2 — Pré-consulta determinística. Auditamos como "read" em
 // daily_logs porque a agregação passa por todos os logs do mês.
 r.get('/pacientes/pre-consulta', ...paciente, audit('read', 'pre_consulta'), patient.preConsulta);
+// Lote 32.4 — Alertas clínicos objetivos (sintoma persistente etc.).
+r.get('/pacientes/alertas', ...paciente, audit('read', 'alertas'), patient.alertas);
 r.get('/pacientes/profissionais', ...paciente, patient.listarProfissionais);
 r.post('/pacientes/profissionais', ...paciente, patient.convidarProfissional);
 r.delete('/pacientes/profissionais/:id', ...paciente, patient.revogarProfissional);
