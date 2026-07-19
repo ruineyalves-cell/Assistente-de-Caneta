@@ -272,6 +272,18 @@ class ApiService {
     }
   }
 
+  /// Lote 32.4 — Alertas clínicos objetivos (sintoma persistente etc.).
+  /// Sempre retorna a lista mesmo quando vazia — o cliente decide se
+  /// mostra banner e/ou notificação.
+  Future<Map<String, dynamic>> obterAlertas() async {
+    try {
+      final response = await _dio.get('/api/pacientes/alertas');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   // ========== LOGS ==========
 
   Future<Map<String, dynamic>> registrarLog({

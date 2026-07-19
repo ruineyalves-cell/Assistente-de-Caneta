@@ -7,6 +7,7 @@ const dailyLogModel = require('../models/dailyLogModel');
 const db = require('../config/db');
 const { calcularFatos } = require('../utils/preConsulta');
 const { selecionarPerguntas } = require('../utils/perguntasPreConsulta');
+const { calcularAlertas } = require('../utils/alertas');
 
 // Lote 31 — enums espelham lib/models/patient_profile.dart no cliente.
 // Mantidos como strings livres (VARCHAR) porque a lista pode evoluir
@@ -144,4 +145,37 @@ async function preConsulta(req, res, next) {
   }
 }
 
-module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta };
+/**
+ * GET /api/pacientes/alertas
+ *
+ * Lote 32.4 — Alertas objetivos. Hoje só sintoma persistente
+ * (≥3 dias intenso em janela de 7). Puro cálculo, sem IA.
+ *
+ * Resposta:
+ *  { alertas: [ … ], disclaimer: string }
+ */
+async function alertas(req, res, next) {
+  try {
+    const hoje = new Date();
+    const desde = new Date(hoje.getTime() - 7 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const ate = hoje.toISOString().slice(0, 10);
+    const logs = await dailyLogModel.listar(req.user.id, {
+      desde,
+      ate,
+      limite: 60,
+    });
+    const lista = calcularAlertas(logs);
+    return res.json({
+      alertas: lista,
+      disclaimer:
+        'Alertas geram apenas convite ao diálogo com quem prescreveu. ' +
+        'Não são diagnóstico e não substituem avaliação médica.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta, alertas };

@@ -32,6 +32,9 @@ class NotificationService {
   // pro dia da aplicação no horário escolhido pelo usuário.
   static const int _idDoseSemanaVespera = 1005;
   static const int _idDoseSemanaDia = 1006;
+  // Lote 32.4 — Alerta clínico (sintoma persistente etc.). Frequência
+  // limitada a 1× por semana pela chamada (HomePage._talvezNotificar).
+  static const int _idAlertaClinico = 1007;
 
   bool get suportado => !kIsWeb;
 
@@ -267,6 +270,32 @@ class NotificationService {
         repeats: true,
         allowWhileIdle: true,
         preciseAlarm: true,
+      ),
+    );
+  }
+
+  /// Lote 32.4 — Alerta clínico objetivo (sintoma persistente, etc.).
+  /// Nunca prescreve — só convida o usuário a abrir o app e conversar
+  /// com quem prescreveu. Rate-limited pela HomePage (1× por semana).
+  Future<void> enviarAlertaSintomaPersistente({
+    required String? primeiroNome,
+    required String titulo,
+    required String descricao,
+  }) async {
+    if (!suportado) return;
+    await inicializar();
+    final nome = _saudarNome(primeiroNome);
+    // Personaliza o corpo pra soar humano sem prescrever.
+    final corpo = descricao.isEmpty
+        ? 'Vale a pena abrir o app e conversar com quem prescreveu, $nome.'
+        : descricao;
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idAlertaClinico,
+        channelKey: _canalDose,
+        title: titulo,
+        body: corpo,
+        notificationLayout: NotificationLayout.BigText,
       ),
     );
   }

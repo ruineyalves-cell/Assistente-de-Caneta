@@ -1060,6 +1060,9 @@ class _HomePageState extends State<HomePage> {
   HealthResumoDia _health = HealthResumoDia.vazio;
   final _healthService = HealthConnectService();
 
+  // Lote 32.4 — Alertas clínicos objetivos (sintoma persistente etc.).
+  List<Map<String, dynamic>> _alertas = const [];
+
   @override
   void initState() {
     super.initState();
@@ -1167,6 +1170,17 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Lote 32.4 — Puxa alertas objetivos do backend. Falha silenciosa
+    // (banner só aparece quando temos dado).
+    List<Map<String, dynamic>> alertas = const [];
+    try {
+      final resp = await auth.apiService.obterAlertas();
+      alertas = ((resp['alertas'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>();
+    } catch (_) {
+      // Backend indisponível — dashboard segue sem banner.
+    }
+
     if (!mounted) return;
     setState(() {
       _eixo = eixo;
@@ -1177,8 +1191,14 @@ class _HomePageState extends State<HomePage> {
       _lembreteDoseHora = lembreteHora;
       _lembreteDoseMinuto = lembreteMinuto;
       _health = healthResumo;
+      _alertas = alertas;
       _contextoCarregado = true;
     });
+
+    // Lote 32.4 — Dispara notificação semanal quando há alerta ativo,
+    // sem interromper o boot. `_talvezNotificarAlertas` é idempotente
+    // e respeita o próprio limitador (1× por semana).
+    unawaited(_talvezNotificarAlertas(alertas));
 
     // Lote 30 — Se o usuário configurou lembrete e o app foi reinstalado
     // ou reiniciado, reagenda para garantir persistência entre boots.
@@ -1318,6 +1338,35 @@ class _HomePageState extends State<HomePage> {
     if (!ehDeHoje) return false;
     if (pesoAppUltimo == null) return true;
     return (pesoH - pesoAppUltimo).abs() >= 0.1;
+  }
+
+  /// Lote 32.4 — Notificação semanal quando há alerta ativo. Respeita
+  /// 1× por semana por tipo de alerta usando prefs; o banner do
+  /// dashboard continua visível todos os dias enquanto persistir.
+  Future<void> _talvezNotificarAlertas(
+      List<Map<String, dynamic>> alertas) async {
+    if (alertas.isEmpty) return;
+    final notif = NotificationService();
+    if (!notif.suportado) return;
+    final auth = context.read<AuthService>();
+    final primeiroNome = (auth.nome ?? '').trim().split(' ').first;
+    final prefs = await SharedPreferences.getInstance();
+    final agora = DateTime.now();
+    for (final a in alertas) {
+      final tipo = a['tipo'] as String? ?? 'desconhecido';
+      final chave = 'alerta_notificado_$tipo';
+      final ultimoIso = prefs.getString(chave);
+      final ultimo = ultimoIso == null ? null : DateTime.tryParse(ultimoIso);
+      final passouSemana =
+          ultimo == null || agora.difference(ultimo).inDays >= 7;
+      if (!passouSemana) continue;
+      await notif.enviarAlertaSintomaPersistente(
+        primeiroNome: primeiroNome,
+        titulo: a['titulo'] as String? ?? 'Recorpo',
+        descricao: a['descricao'] as String? ?? '',
+      );
+      await prefs.setString(chave, agora.toIso8601String());
+    }
   }
 
   Future<void> _importarPesoDeHealth() async {
@@ -1462,6 +1511,20 @@ class _HomePageState extends State<HomePage> {
                   ),
                 if (_deveOfertarImportarPeso(pesoAtual))
                   const SizedBox(height: 12),
+                // 3b) Lote 32.4 — Alertas clínicos objetivos (sintoma
+                //     persistente etc.). Renderiza no máximo 1 banner —
+                //     se houver múltiplos, mostra o primeiro (o backend
+                //     ordena pela severidade / gravidade).
+                if (_alertas.isNotEmpty) ...[
+                  _BannerAlertaClinico(
+                    alerta: _alertas.first,
+                    onAbrir: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const PreConsultaScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 // 3b) Lote 30 — Lembrete semanal da dose. Só aparece se
                 //     o eixo envolve medicação (não faz sentido em
                 //     recomposição natural).
@@ -1894,6 +1957,86 @@ class _ScannersRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lote 32.4 — Banner de alerta clínico objetivo. Nunca prescreve —
+/// só descreve o padrão observado e convida a abrir a pré-consulta.
+class _BannerAlertaClinico extends StatelessWidget {
+  final Map<String, dynamic> alerta;
+  final VoidCallback onAbrir;
+  const _BannerAlertaClinico({required this.alerta, required this.onAbrir});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+      onTap: onAbrir,
+      child: Container(
+        padding: const EdgeInsets.all(RecorpoSpacing.md),
+        decoration: BoxDecoration(
+          color: RecorpoColors.eixoSintomas.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+          border: Border.all(
+            color: RecorpoColors.eixoSintomas.withValues(alpha: 0.45),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: RecorpoGradients.sintomas,
+                borderRadius:
+                    BorderRadius.circular(RecorpoSpacing.radiusSm),
+              ),
+              child:
+                  const Icon(Icons.medical_information_outlined,
+                      color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: RecorpoSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(alerta['titulo'] as String? ?? 'Alerta',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onSurface)),
+                  const SizedBox(height: 4),
+                  Text(alerta['descricao'] as String? ?? '',
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.45,
+                          color: scheme.onSurface.withValues(alpha: 0.75))),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        (alerta['cta'] as String?) ??
+                            'Ver detalhes na pré-consulta',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: RecorpoColors.eixoSintomas,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right,
+                          size: 16, color: RecorpoColors.eixoSintomas),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
