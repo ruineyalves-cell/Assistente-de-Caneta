@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/patient_profile.dart';
+import '../models/symptom.dart';
 
 /// Gera o "Relatório do Paciente" em PDF (Lote 13). Consome dados que a
 /// tela `ReportScreen` já buscou (perfil do backend + logs + scores +
@@ -65,6 +67,7 @@ class ReportPdfService {
             _linha('Dose atual', perfil['doseAtual']?.toString() ?? '—'),
           ]),
           _secaoLogs('Últimos registros (até 14 dias)', logs, fmtData),
+          _secaoFarmacovigilancia(logs, fmtData),
           _secaoScores('Scores (últimos 28 dias)', scores, fmtData),
           pw.SizedBox(height: 12),
           _disclaimer(),
@@ -150,6 +153,108 @@ class ReportPdfService {
         ],
       ),
     );
+  }
+
+  /// Lote 25 — Extrai SymptomEntry do campo `efeitos` de cada log
+  /// (JSON `{sintomas: [{t,i,q,c}, ...]}`). Ignora logs sem sintomas
+  /// estruturados (mantém compatibilidade com registros antigos que
+  /// usavam texto livre).
+  pw.Widget _secaoFarmacovigilancia(
+      List<dynamic> logs, DateFormat fmt) {
+    final entries = <SymptomEntry>[];
+    for (final log in logs) {
+      final l = _asMap(log);
+      final efeitos = l['efeitos']?.toString();
+      if (efeitos == null || efeitos.isEmpty) continue;
+      try {
+        final parsed = jsonDecode(efeitos);
+        if (parsed is Map && parsed['sintomas'] is List) {
+          for (final j in (parsed['sintomas'] as List)) {
+            final e = SymptomEntry.fromJson(j as Map<String, dynamic>);
+            if (e != null) entries.add(e);
+          }
+        }
+      } catch (_) {}
+    }
+    if (entries.isEmpty) {
+      return _secao('Farmacovigilância (últimos 14 dias)', [
+        pw.Text('Nenhum sintoma registrado no período.',
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+      ]);
+    }
+    entries.sort((a, b) => b.quando.compareTo(a.quando));
+
+    // Sumário por tipo (contagem + max intensidade)
+    final resumoPorTipo = <SymptomType, ({int contagem, int maxInt})>{};
+    for (final e in entries) {
+      final atual = resumoPorTipo[e.tipo];
+      if (atual == null) {
+        resumoPorTipo[e.tipo] =
+            (contagem: 1, maxInt: e.intensidade.valor);
+      } else {
+        resumoPorTipo[e.tipo] = (
+          contagem: atual.contagem + 1,
+          maxInt: atual.maxInt > e.intensidade.valor
+              ? atual.maxInt
+              : e.intensidade.valor,
+        );
+      }
+    }
+    final linhasResumo = resumoPorTipo.entries.toList()
+      ..sort((a, b) => b.value.contagem.compareTo(a.value.contagem));
+
+    return _secao('Farmacovigilância (últimos 14 dias)', [
+      pw.Text(
+        'Sintomas autorreportados pelo paciente. Escala 1 (leve) — 2 (moderado) — 3 (intenso).',
+        style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+      ),
+      pw.SizedBox(height: 6),
+      pw.TableHelper.fromTextArray(
+        border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+        headerDecoration:
+            const pw.BoxDecoration(color: PdfColors.orange50),
+        headerStyle: pw.TextStyle(
+            fontSize: 9,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.orange900),
+        cellStyle: const pw.TextStyle(fontSize: 9),
+        headers: const ['Sintoma', 'Ocorrências', 'Intensidade máx.'],
+        data: linhasResumo
+            .map((e) => [
+                  infoDe(e.key).rotulo,
+                  '${e.value.contagem}',
+                  '${e.value.maxInt}',
+                ])
+            .toList(),
+      ),
+      pw.SizedBox(height: 8),
+      pw.Text('Linha do tempo',
+          style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.grey800)),
+      pw.SizedBox(height: 4),
+      pw.TableHelper.fromTextArray(
+        border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+        headerDecoration:
+            const pw.BoxDecoration(color: PdfColors.orange50),
+        headerStyle: pw.TextStyle(
+            fontSize: 9,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.orange900),
+        cellStyle: const pw.TextStyle(fontSize: 9),
+        headers: const ['Quando', 'Sintoma', 'Intensidade', 'Contexto'],
+        data: entries
+            .take(40)
+            .map((e) => [
+                  DateFormat('dd/MM HH:mm', 'pt_BR').format(e.quando),
+                  infoDe(e.tipo).rotulo,
+                  '${e.intensidade.valor} · ${e.intensidade.label}',
+                  e.contexto ?? '—',
+                ])
+            .toList(),
+      ),
+    ]);
   }
 
   pw.Widget _secaoLogs(
