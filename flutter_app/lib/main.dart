@@ -36,6 +36,8 @@ import 'screens/diet_scanner_screen.dart';
 import 'screens/meal_result_screen.dart';
 import 'widgets/eixo_card.dart';
 import 'widgets/symptoms_sheet.dart';
+import 'widgets/water_quick_sheet.dart';
+import 'widgets/weight_quick_sheet.dart';
 import 'screens/effort_screen.dart';
 import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
@@ -1460,9 +1462,10 @@ class _HomePageState extends State<HomePage> {
                             ? 'Sem meta'
                             : '$aguaPct% da meta',
                         rodape: 'Toque para adicionar',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const LogDailyPage()),
+                        onTap: () => mostrarWaterQuickSheet(
+                          context,
+                          aguaAtualMl: consumidoAguaMl.round(),
+                          metaAguaMl: metaAguaMl?.round(),
                         ),
                       ),
                     ),
@@ -1477,7 +1480,7 @@ class _HomePageState extends State<HomePage> {
                         titulo: 'Peso',
                         valor: pesoAtual == null
                             ? '—'
-                            : '${pesoAtual.toStringAsFixed(1)}',
+                            : pesoAtual.toStringAsFixed(1),
                         subtitulo: pesoAtual == null
                             ? 'Sem registro'
                             : deltaPeso == null
@@ -1486,9 +1489,9 @@ class _HomePageState extends State<HomePage> {
                                     ? 'kg · ${deltaPeso.toStringAsFixed(1)} vs último'
                                     : 'kg · +${deltaPeso.toStringAsFixed(1)} vs último',
                         rodape: 'Toque para registrar',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const LogDailyPage()),
+                        onTap: () => mostrarWeightQuickSheet(
+                          context,
+                          pesoAnteriorKg: pesoAtual,
                         ),
                       ),
                     ),
