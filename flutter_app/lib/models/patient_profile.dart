@@ -109,6 +109,15 @@ class ProfilePrefsKeys {
   // patient_profiles); Lote 31 pode subir isso pro backend quando o
   // sync de peso/sintomas entrar.
   static const String metaPesoKg = 'profile_meta_peso_kg';
+
+  // Lote 30 — Lembrete semanal da dose (GLP-1 típico é 1x/semana).
+  // O agendamento é local via `awesome_notifications`. Não envolve
+  // backend porque o horário é privado do usuário e a notificação é
+  // disparada pelo dispositivo.
+  static const String doseReminderEnabled = 'profile_dose_reminder_enabled';
+  static const String doseReminderWeekday = 'profile_dose_reminder_weekday';
+  static const String doseReminderHour = 'profile_dose_reminder_hour';
+  static const String doseReminderMinute = 'profile_dose_reminder_minute';
 }
 
 /// Dados de perfil vindos do backend (`GET /api/pacientes/perfil`).
