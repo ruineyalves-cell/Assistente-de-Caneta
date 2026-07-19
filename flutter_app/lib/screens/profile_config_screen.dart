@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/patient_profile.dart';
 import '../services/auth_service.dart';
 import '../services/premium_service.dart';
+import '../services/theme_controller.dart';
 import '../utils/constants.dart';
+import '../utils/theme.dart';
 import 'paywall_screen.dart';
 
 /// Tela do Perfil / Matriz Metabólica (Lote 5).
@@ -506,10 +508,69 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
             ),
             const SizedBox(height: 20),
             const _CardPremium(),
+            const SizedBox(height: 16),
+            const _CardAparencia(),
             const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Lote 24 — Toggle discreto de tema (Automático / Claro / Escuro).
+class _CardAparencia extends StatelessWidget {
+  const _CardAparencia();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeController>(
+      builder: (ctx, controller, _) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(RecorpoSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.palette_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text('Aparência',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto, size: 16),
+                      label: Text('Auto', style: TextStyle(fontSize: 11)),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode_outlined, size: 16),
+                      label: Text('Claro', style: TextStyle(fontSize: 11)),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode_outlined, size: 16),
+                      label: Text('Escuro', style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
+                  selected: {controller.mode},
+                  onSelectionChanged: (s) => controller.setMode(s.first),
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -6,6 +6,9 @@ import '../services/auth_service.dart';
 import '../services/logs_provider.dart';
 import '../services/meal_recognition_service.dart';
 import '../utils/constants.dart';
+import '../utils/theme.dart';
+import '../widgets/info_pill.dart';
+import '../widgets/symptoms_sheet.dart';
 
 /// Lote 21 — Tela de resultado da IA de refeição.
 ///
@@ -114,7 +117,10 @@ class _MealResultScreenState extends State<MealResultScreen> {
         aguaMl: _aguaMl,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      // Devolve o título da refeição pro chamador (Dashboard) usar
+      // como contexto do prompt pós-refeição.
+      final descricao = _tituloCtrl.text.trim();
+      Navigator.of(context).pop(descricao);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Refeição registrada. Bom apetite!')),
       );
@@ -142,6 +148,21 @@ class _MealResultScreenState extends State<MealResultScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.file(File(widget.foto.path)),
+              ),
+              const SizedBox(height: 12),
+              const InfoPill(
+                titulo: 'Sensível a gorduras?',
+                resumo:
+                    'Frituras e pratos muito gordurosos podem intensificar náusea.',
+                textoCompleto:
+                    'Muitos pacientes em GLP-1 relatam desconforto digestivo com alimentos '
+                    'muito gordurosos ou frituras nas primeiras semanas. Isso acontece '
+                    'porque o medicamento retarda o esvaziamento gástrico — a comida fica '
+                    'mais tempo no estômago. Preferir versões grelhadas, assadas ou cozidas '
+                    'costuma ajudar. Se sentir mal-estar, registre nos sintomas para '
+                    'aparecer no relatório do seu médico.',
+                fonte: 'Bulas Ozempic e Mounjaro — Anvisa; ABESO 2023',
+                icone: Icons.tips_and_updates_outlined,
               ),
               const SizedBox(height: 16),
               _cardLocal(),

@@ -12,6 +12,8 @@ import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/logs_provider.dart';
 import 'services/premium_service.dart';
+import 'services/theme_controller.dart';
+import 'utils/theme.dart';
 import 'widgets/score_card.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
@@ -27,6 +29,8 @@ import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
 import 'screens/meal_result_screen.dart';
+import 'widgets/eixo_card.dart';
+import 'widgets/symptoms_sheet.dart';
 import 'screens/effort_screen.dart';
 import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
@@ -44,6 +48,10 @@ void main() async {
   // não estiver disponível (dev/CI/web).
   final premiumService = PremiumService();
   unawaited(premiumService.inicializar());
+
+  // Lote 24 — Controller de tema (auto/claro/escuro persistido).
+  final themeController = ThemeController();
+  await themeController.inicializar();
 
   final prefs = await SharedPreferences.getInstance();
   final disclaimerAceito =
@@ -72,6 +80,7 @@ void main() async {
   runApp(MyApp(
     authService: authService,
     premiumService: premiumService,
+    themeController: themeController,
     disclaimerAceitoInicial: disclaimerAceito,
     initialWidgetUri: initialUri,
   ));
@@ -80,6 +89,7 @@ void main() async {
 class MyApp extends StatefulWidget {
   final AuthService authService;
   final PremiumService premiumService;
+  final ThemeController themeController;
   final bool disclaimerAceitoInicial;
 
   /// URI vinda do App Widget do Android (Lote 17) — se
@@ -91,6 +101,7 @@ class MyApp extends StatefulWidget {
     super.key,
     required this.authService,
     required this.premiumService,
+    required this.themeController,
     required this.disclaimerAceitoInicial,
     this.initialWidgetUri,
   });
@@ -144,6 +155,8 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider<AuthService>.value(value: widget.authService),
         ChangeNotifierProvider<PremiumService>.value(
             value: widget.premiumService),
+        ChangeNotifierProvider<ThemeController>.value(
+            value: widget.themeController),
         // LogsProvider é um ChangeNotifier — precisa ser exposto via
         // ChangeNotifierProxyProvider para que os widgets escutem
         // notifyListeners(). Reaproveita a instância entre rebuilds e só
@@ -155,44 +168,31 @@ class _MyAppState extends State<MyApp> {
               previous ?? LogsProvider(authService.apiService),
         ),
       ],
-      child: MaterialApp(
-        navigatorKey: _navKey,
-        title: AppConstants.brandName,
-        debugShowCheckedModeBanner: false,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('pt', 'BR'), Locale('en')],
-        locale: const Locale('pt', 'BR'),
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.azulClinico,
-            brightness: Brightness.light,
-          ),
-          scaffoldBackgroundColor: AppColors.fundoFrio,
-          fontFamily: 'Roboto',
+      child: Consumer<ThemeController>(
+        builder: (ctx, themeController, _) => MaterialApp(
+          navigatorKey: _navKey,
+          title: AppConstants.brandName,
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('pt', 'BR'), Locale('en')],
+          locale: const Locale('pt', 'BR'),
+          theme: RecorpoTheme.light(),
+          darkTheme: RecorpoTheme.dark(),
+          themeMode: themeController.mode,
+          home: _disclaimerAceito
+              ? Consumer<AuthService>(
+                  builder: (context, authService, _) {
+                    return authService.isAuthenticated
+                        ? const DashboardPage()
+                        : const LoginPage();
+                  },
+                )
+              : DisclaimerScreen(onAceito: _onDisclaimerAceito),
         ),
-        darkTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.azulClinico,
-            brightness: Brightness.dark,
-          ),
-          fontFamily: 'Roboto',
-        ),
-        themeMode: ThemeMode.system,
-        home: _disclaimerAceito
-            ? Consumer<AuthService>(
-                builder: (context, authService, _) {
-                  return authService.isAuthenticated
-                      ? const DashboardPage()
-                      : const LoginPage();
-                },
-              )
-            : DisclaimerScreen(onAceito: _onDisclaimerAceito),
       ),
     );
   }
@@ -1271,6 +1271,16 @@ class _HomePageState extends State<HomePage> {
                 // 9) Scanners (ferramentas mais avançadas)
                 _ScannersRow(),
                 const SizedBox(height: 16),
+                // 9.5) Sintomas — card estilo Samsung Health (Lote 25)
+                EixoCard(
+                  eixo: EixoRecorpo.sintomas,
+                  titulo: 'Como você está?',
+                  valor: 'Registrar',
+                  subtitulo: 'Náusea, dor, tontura…',
+                  rodape: 'Toque para abrir os sintomas',
+                  onTap: () => abrirSymptomsSheet(context),
+                ),
+                const SizedBox(height: 16),
                 // 10) Análise longa — gráfico de 28 dias
                 if (logsProvider.scores.isNotEmpty)
                   MetricChart(
@@ -1381,11 +1391,18 @@ class _ScannersRow extends StatelessWidget {
     final foto = await Navigator.of(context).push<XFile?>(
       MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
     );
-    if (foto != null && context.mounted) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
-      );
-    }
+    if (foto == null || !context.mounted) return;
+    // Meal result devolve a descrição registrada (ou null se cancelou).
+    final descricao = await Navigator.of(context).push<String?>(
+      MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
+    );
+    if (!context.mounted || descricao == null) return;
+    // Lote 25 — Prompt pós-refeição. Contexto vai como pill no sheet.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!context.mounted) return;
+      abrirSymptomsSheet(context,
+          contexto: descricao.isEmpty ? null : 'Após: $descricao');
+    });
   }
 
   void _abrirPrescricao(BuildContext context) {
