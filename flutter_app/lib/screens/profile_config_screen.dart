@@ -11,6 +11,7 @@ import '../services/theme_controller.dart';
 import '../utils/constants.dart';
 import '../utils/theme.dart';
 import 'app_lock_setup_screen.dart';
+import 'meus_dados_screen.dart';
 import 'paywall_screen.dart';
 
 /// Tela do Perfil / Matriz Metabólica (Lote 5).
@@ -520,6 +521,9 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
             // Lote 32.5 — Segurança do app (PIN + biometria).
             const _CardAppLock(),
             const SizedBox(height: 16),
+            // Lote 32.6 — Meus dados (LGPD).
+            const _CardMeusDados(),
+            const SizedBox(height: 16),
             const _CardPremium(),
             const SizedBox(height: 16),
             const _CardAparencia(),
@@ -742,6 +746,69 @@ class _CardAppLock extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Lote 32.6 — Cartão de acesso à tela "Meus dados" (LGPD).
+class _CardMeusDados extends StatelessWidget {
+  const _CardMeusDados();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const MeusDadosScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: scheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: RecorpoGradients.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.folder_shared_outlined,
+                  color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Meus dados',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Exportar, ver acessos, excluir conta (LGPD).',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right,
+                color: scheme.onSurface.withValues(alpha: 0.5)),
+          ],
+        ),
       ),
     );
   }

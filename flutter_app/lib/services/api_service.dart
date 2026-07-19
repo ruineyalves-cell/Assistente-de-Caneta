@@ -284,6 +284,47 @@ class ApiService {
     }
   }
 
+  // ========== LGPD (Lote 32.6) ==========
+
+  /// Portabilidade dos dados — LGPD art. 18, V. Retorna o pacote
+  /// completo (usuário + perfil + consentimentos + logs + scores).
+  Future<Map<String, dynamic>> exportarDadosLgpd() async {
+    try {
+      final response = await _dio.get('/api/lgpd/exportar');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
+  /// Auditoria de acessos aos meus dados — LGPD art. 18, VII.
+  /// Retorna quem/quando/o quê nos últimos 500 registros.
+  Future<List<Map<String, dynamic>>> listarAcessosLgpd() async {
+    try {
+      final response = await _dio.get('/api/lgpd/acessos');
+      final data = response.data as Map<String, dynamic>;
+      return List<Map<String, dynamic>>.from(
+          (data['acessos'] as List?) ?? const []);
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
+  /// Direito de eliminação — LGPD art. 18, VI. Marca a conta para
+  /// exclusão imediata; dados sensíveis são apagados definitivamente
+  /// em até 30 dias (§7 da Política).
+  Future<Map<String, dynamic>> excluirContaLgpd() async {
+    try {
+      final response = await _dio.delete(
+        '/api/lgpd/conta',
+        data: {'confirmo': true},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   // ========== LOGS ==========
 
   Future<Map<String, dynamic>> registrarLog({
