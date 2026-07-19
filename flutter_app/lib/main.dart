@@ -41,6 +41,7 @@ import 'widgets/symptoms_sheet.dart';
 import 'widgets/water_quick_sheet.dart';
 import 'widgets/weight_quick_sheet.dart';
 import 'screens/effort_screen.dart';
+import 'screens/pre_consulta_screen.dart';
 import 'screens/report_screen.dart';
 import 'models/patient_profile.dart';
 import 'utils/constants.dart';
@@ -1484,6 +1485,18 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
                 ],
+                // Lote 32.2 — Preparar consulta. Só aparece quando o
+                // usuário já tem ≥7 dias de registros — antes disso o
+                // resumo fica ralo e a experiência decepciona.
+                if (logsProvider.logs.length >= 7) ...[
+                  _CardPrepararConsulta(
+                    onAbrir: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const PreConsultaScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // 4) HERO — grid 2×2 de EixoCards (Lote 26)
                 //    Cada card mostra o estado real do dia e leva pra
                 //    ação/detalhe. Visual estilo Samsung Health.
@@ -1881,6 +1894,77 @@ class _ScannersRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lote 32.2 — Card que abre a tela "Preparar consulta". Fica no
+/// dashboard só depois de 7+ dias registrados (senão o resumo é ralo).
+class _CardPrepararConsulta extends StatelessWidget {
+  final VoidCallback onAbrir;
+  const _CardPrepararConsulta({required this.onAbrir});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+      onTap: onAbrir,
+      child: Container(
+        padding: const EdgeInsets.all(RecorpoSpacing.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              RecorpoColors.confirma.withValues(alpha: 0.14),
+              RecorpoColors.confirma.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+          border: Border.all(
+            color: RecorpoColors.confirma.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: RecorpoColors.confirma,
+                borderRadius:
+                    BorderRadius.circular(RecorpoSpacing.radiusSm),
+              ),
+              child: const Icon(Icons.assignment_outlined,
+                  color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: RecorpoSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Preparar minha próxima consulta',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Resumo objetivo + perguntas curadas.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right,
+                color: scheme.onSurface.withValues(alpha: 0.5)),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -259,6 +259,19 @@ class ApiService {
     }
   }
 
+  /// Lote 32.2 — Pré-consulta determinística. Sem IA. Retorna:
+  ///  - `fatos`: peso/dose/sintomas agregados dos últimos 30 dias
+  ///  - `perguntas`: até 5 perguntas curadas para o médico
+  ///  - `disclaimer`: texto legal a exibir em topo e rodapé
+  Future<Map<String, dynamic>> obterPreConsulta() async {
+    try {
+      final response = await _dio.get('/api/pacientes/pre-consulta');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   // ========== LOGS ==========
 
   Future<Map<String, dynamic>> registrarLog({

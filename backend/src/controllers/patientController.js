@@ -3,7 +3,10 @@ const patientModel = require('../models/patientModel');
 const medicationModel = require('../models/medicationModel');
 const linkModel = require('../models/linkModel');
 const userModel = require('../models/userModel');
+const dailyLogModel = require('../models/dailyLogModel');
 const db = require('../config/db');
+const { calcularFatos } = require('../utils/preConsulta');
+const { selecionarPerguntas } = require('../utils/perguntasPreConsulta');
 
 // Lote 31 — enums espelham lib/models/patient_profile.dart no cliente.
 // Mantidos como strings livres (VARCHAR) porque a lista pode evoluir
@@ -97,4 +100,48 @@ async function listarProfissionais(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais };
+/**
+ * GET /api/pacientes/pre-consulta
+ *
+ * Lote 32.2 — Pré-consulta determinística (sem IA).
+ *
+ * Retorna um resumo objetivo dos últimos 30 dias + até 5 perguntas
+ * curadas para o paciente levar ao médico. Nada é gerado por IA;
+ * tudo vem de utils/preConsulta.js + utils/perguntasPreConsulta.js.
+ *
+ * A resposta inclui um disclaimer que o cliente exibe sempre no topo
+ * e no rodapé — reforça que o conteúdo NÃO é diagnóstico e NÃO
+ * substitui a avaliação médica.
+ */
+async function preConsulta(req, res, next) {
+  try {
+    const janelaDias = 30;
+    const hoje = new Date();
+    const inicio = new Date(hoje.getTime() - janelaDias * 86_400_000);
+    const desde = inicio.toISOString().slice(0, 10);
+    const ate = hoje.toISOString().slice(0, 10);
+
+    const [perfil, logs] = await Promise.all([
+      patientModel.perfil(req.user.id),
+      dailyLogModel.listar(req.user.id, { desde, ate, limite: 200 }),
+    ]);
+
+    const fatos = calcularFatos({ perfil, logs, janelaDias });
+    const perguntas = selecionarPerguntas(fatos, { limite: 5 });
+
+    return res.json({
+      janelaDias,
+      geradoEm: hoje.toISOString(),
+      disclaimer:
+        'Este é um resumo automatizado dos SEUS registros no Recorpo. ' +
+        'Não é diagnóstico, não é prescrição e não substitui a avaliação ' +
+        'do seu médico.',
+      fatos,
+      perguntas,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta };
