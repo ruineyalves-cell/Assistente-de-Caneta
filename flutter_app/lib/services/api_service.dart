@@ -284,6 +284,17 @@ class ApiService {
     }
   }
 
+  /// Lote 32.3 — Resumo diário determinístico. Sem IA.
+  /// Retorna: `{saudacao, dataRef, vazio, linhas: [{tipo, texto}]}`.
+  Future<Map<String, dynamic>> obterResumoDiario() async {
+    try {
+      final response = await _dio.get('/api/pacientes/resumo-diario');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   // ========== LGPD (Lote 32.6) ==========
 
   /// Portabilidade dos dados — LGPD art. 18, V. Retorna o pacote
