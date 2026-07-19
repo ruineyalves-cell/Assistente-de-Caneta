@@ -33,6 +33,10 @@ class AppConstants {
   static const String keyEmail = 'email';
   static const String keyNome = 'nome';
   static const String keyDisclaimerAceito = 'disclaimer_aceito_v1';
+  // Lote 29 — Onboarding em 3 telas (boas-vindas, medicação, meta de peso).
+  // Só é exibido uma vez após o primeiro login; a flag é persistida
+  // por usuário quando ele conclui as três etapas ou opta por pular.
+  static const String keyOnboardingCompleto = 'onboarding_completo_v1';
 
   // Defaults
   static const double defaultMetaProteinaGkg = 1.2;

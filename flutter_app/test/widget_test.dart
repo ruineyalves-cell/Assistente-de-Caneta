@@ -17,6 +17,7 @@ void main() {
       premiumService: PremiumService(),
       themeController: ThemeController(),
       disclaimerAceitoInicial: false,
+      onboardingCompletoInicial: false,
     ));
     await tester.pump();
 
@@ -31,6 +32,7 @@ void main() {
       premiumService: PremiumService(),
       themeController: ThemeController(),
       disclaimerAceitoInicial: true,
+      onboardingCompletoInicial: true,
     ));
     await tester.pump();
 
