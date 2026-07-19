@@ -89,7 +89,11 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
       // Medicações (catálogo público — não exige consentimento).
       _medicacoes = await auth.apiService.listarMedicacoes();
 
-      // Perfil no backend (pode 404 se ainda não salvou).
+      // Perfil no backend (pode 404 se ainda não salvou). Lote 31 —
+      // o backend agora é a fonte canônica também do eixo, gênero,
+      // sexo e última dose; ele sobrescreve o que veio das prefs
+      // quando devolve valores não-nulos, mantendo prefs como cache
+      // offline.
       try {
         final json = await auth.apiService.obterPerfil();
         final perfilJson = json['perfil'] as Map<String, dynamic>?;
@@ -100,9 +104,13 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
           _doseCtrl.text = perfil.doseAtual ?? '';
           _pesoCtrl.text = perfil.pesoInicialKg?.toStringAsFixed(1) ?? '';
           _alturaCtrl.text = perfil.alturaCm?.toString() ?? '';
+          _eixo = perfil.eixoFarmacologico ?? _eixo;
+          _genero = perfil.identidadeGenero ?? _genero;
+          _sexo = perfil.sexoBiologico ?? _sexo;
+          _ultimaDose = perfil.ultimaDose ?? _ultimaDose;
         }
       } catch (_) {
-        // Sem perfil ainda: mantém defaults vazios.
+        // Sem perfil ainda ou offline: mantém o que veio de prefs.
       }
     } catch (e) {
       _erroCarregamento = e.toString();
@@ -146,22 +154,22 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
       final altura = int.tryParse(_alturaCtrl.text);
       final dose = _doseCtrl.text.trim().isEmpty ? null : _doseCtrl.text.trim();
 
-      if (_declarouPrescricao) {
-        await auth.apiService.salvarPerfil(
-          declarouPrescricao: true,
-          medicacaoId: _medicacaoIdSelecionada,
-          dosagem: dose,
-          pesoKg: peso,
-          alturaCm: altura,
-        );
-      } else if (peso != null || altura != null) {
-        // Salva peso/altura sem medicação — backend permite.
-        await auth.apiService.salvarPerfil(
-          declarouPrescricao: false,
-          pesoKg: peso,
-          alturaCm: altura,
-        );
-      }
+      // Lote 31 — perfil estendido também vai pro backend agora.
+      // O endpoint aceita todos os campos com COALESCE, então uma
+      // única chamada cobre medicação + peso/altura + eixo + gênero
+      // + sexo + última dose. Sempre chamamos, mesmo sem prescrição.
+      final ultimaDoseIso = _ultimaDose?.toIso8601String().split('T').first;
+      await auth.apiService.salvarPerfil(
+        declarouPrescricao: _declarouPrescricao,
+        medicacaoId: _declarouPrescricao ? _medicacaoIdSelecionada : null,
+        dosagem: _declarouPrescricao ? dose : null,
+        pesoKg: peso,
+        alturaCm: altura,
+        eixoFarmacologico: _eixo?.name,
+        identidadeGenero: _genero?.name,
+        sexoBiologico: _sexo?.name,
+        ultimaDoseIso: ultimaDoseIso,
+      );
 
       if (!mounted) return;
       setState(() {

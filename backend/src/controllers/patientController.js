@@ -5,6 +5,9 @@ const linkModel = require('../models/linkModel');
 const userModel = require('../models/userModel');
 const db = require('../config/db');
 
+// Lote 31 — enums espelham lib/models/patient_profile.dart no cliente.
+// Mantidos como strings livres (VARCHAR) porque a lista pode evoluir
+// junto com a farmacologia; a validação de conjunto fica no cliente.
 const perfilSchema = z.object({
   medicationId: z.number().int().positive().optional(),
   doseAtual: z.string().max(30).optional(),
@@ -14,6 +17,12 @@ const perfilSchema = z.object({
   declarouPrescricao: z.boolean(),
   metaProteinaGkg: z.number().min(0.8).max(2.5).optional(),
   metaAguaMlKg: z.number().min(20).max(60).optional(),
+  // Perfil estendido — vinham só como shared_preferences no cliente.
+  eixoFarmacologico: z.string().max(40).optional(),
+  identidadeGenero: z.string().max(30).optional(),
+  sexoBiologico: z.string().max(30).optional(),
+  ultimaDoseIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data ISO YYYY-MM-DD').optional(),
+  metaPesoKg: z.number().min(20).max(400).optional(),
 });
 
 /** PUT /api/pacientes/perfil */

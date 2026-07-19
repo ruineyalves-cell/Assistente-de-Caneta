@@ -1099,6 +1099,49 @@ class _HomePageState extends State<HomePage> {
       // Sem perfil ainda ou backend indisponível — segue sem metas.
     }
 
+    // Lote 31 — Migração one-shot das prefs locais para o backend.
+    // Roda uma única vez por instalação: se o backend ainda não conhece
+    // eixo/identidade/sexo/última dose/meta de peso, sobe o que temos
+    // em prefs. Idempotente e silencioso — em caso de erro, tenta na
+    // próxima abertura porque a flag só é gravada em caso de sucesso.
+    final jaMigrado =
+        prefs.getBool(AppConstants.keyPerfilMigradoParaBackendV1) ?? false;
+    if (!jaMigrado && perfil != null) {
+      final ultimaDoseIso = prefs.getString(ProfilePrefsKeys.ultimaDoseIso);
+      final sexoNome = prefs.getString(ProfilePrefsKeys.sexoBiologico);
+      final metaPesoKg = prefs.getDouble(ProfilePrefsKeys.metaPesoKg);
+      final precisaSubir = (perfil.eixoFarmacologico == null && eixo != null) ||
+          (perfil.identidadeGenero == null && genero != null) ||
+          (perfil.sexoBiologico == null && sexoNome != null) ||
+          (perfil.ultimaDose == null && ultimaDoseIso != null) ||
+          (perfil.metaPesoKg == null && metaPesoKg != null);
+      if (precisaSubir) {
+        try {
+          await auth.apiService.salvarPerfil(
+            declarouPrescricao: perfil.declarouPrescricao,
+            eixoFarmacologico:
+                perfil.eixoFarmacologico == null ? eixo?.name : null,
+            identidadeGenero:
+                perfil.identidadeGenero == null ? genero?.name : null,
+            sexoBiologico:
+                perfil.sexoBiologico == null ? sexoNome : null,
+            ultimaDoseIso: perfil.ultimaDose == null
+                ? ultimaDoseIso?.split('T').first
+                : null,
+            metaPesoKg: perfil.metaPesoKg == null ? metaPesoKg : null,
+          );
+          await prefs.setBool(
+              AppConstants.keyPerfilMigradoParaBackendV1, true);
+        } catch (_) {
+          // Tenta de novo na próxima abertura.
+        }
+      } else {
+        // Já não há mais nada pra migrar — marca como concluído.
+        await prefs.setBool(
+            AppConstants.keyPerfilMigradoParaBackendV1, true);
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _eixo = eixo;

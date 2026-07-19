@@ -220,6 +220,12 @@ class ApiService {
     int? alturaCm,
     double? metaProteinaGkg,
     double? metaAguaMlkg,
+    // Lote 31 — perfil estendido antes só em SharedPreferences.
+    String? eixoFarmacologico,
+    String? identidadeGenero,
+    String? sexoBiologico,
+    String? ultimaDoseIso,
+    double? metaPesoKg,
   }) async {
     try {
       final data = <String, dynamic>{'declarouPrescricao': declarouPrescricao};
@@ -229,6 +235,13 @@ class ApiService {
       if (alturaCm != null) data['alturaCm'] = alturaCm;
       if (metaProteinaGkg != null) data['metaProteinaGkg'] = metaProteinaGkg;
       if (metaAguaMlkg != null) data['metaAguaMlKg'] = metaAguaMlkg;
+      if (eixoFarmacologico != null) {
+        data['eixoFarmacologico'] = eixoFarmacologico;
+      }
+      if (identidadeGenero != null) data['identidadeGenero'] = identidadeGenero;
+      if (sexoBiologico != null) data['sexoBiologico'] = sexoBiologico;
+      if (ultimaDoseIso != null) data['ultimaDoseIso'] = ultimaDoseIso;
+      if (metaPesoKg != null) data['metaPesoKg'] = metaPesoKg;
 
       final response = await _dio.put('/api/pacientes/perfil', data: data);
       return response.data as Map<String, dynamic>;

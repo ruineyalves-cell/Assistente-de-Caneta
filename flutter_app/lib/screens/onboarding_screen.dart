@@ -156,21 +156,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Persistir eixo local (backend não conhece esse campo).
+      // Lote 31 — Agora enviamos eixo + meta de peso via backend
+      // (patient_profiles.eixo_farmacologico / meta_peso_kg_enc), pra
+      // sobreviver a troca de aparelho. Mantemos também as prefs locais
+      // como cache offline e retrocompatibilidade com telas que ainda
+      // leem de lá antes do próximo GET de perfil.
       if (_eixo != null) {
         await prefs.setString(
             ProfilePrefsKeys.eixoFarmacologico, _eixo!.name);
       }
-      if (meta != null && meta > 20 && meta < 400) {
+      final metaValida = meta != null && meta > 20 && meta < 400;
+      if (metaValida) {
         await prefs.setDouble(ProfilePrefsKeys.metaPesoKg, meta);
       }
 
-      // Salvar no backend: peso + medicação (se escolhida).
+      // Salvar no backend: peso + medicação + perfil estendido.
       final envolveMed = _eixo?.envolveMedicacao ?? false;
       await auth.apiService.salvarPerfil(
         declarouPrescricao: envolveMed && _medicacaoId != null,
         medicacaoId: _medicacaoId,
         pesoKg: peso,
+        eixoFarmacologico: _eixo?.name,
+        metaPesoKg: metaValida ? meta : null,
       );
 
       await prefs.setBool(AppConstants.keyOnboardingCompleto, true);
