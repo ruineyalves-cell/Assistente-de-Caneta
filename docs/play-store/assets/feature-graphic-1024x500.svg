@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+  <title>Recorpo — Feature Graphic 1024×500</title>
+  <defs>
+    <!-- Fundo profundo com radial glow -->
+    <radialGradient id="bg" cx="30%" cy="30%" r="90%">
+      <stop offset="0%" stop-color="#183963" />
+      <stop offset="50%" stop-color="#0F2544" />
+      <stop offset="100%" stop-color="#070E1A" />
+    </radialGradient>
+    <!-- Halo azul-clínico -->
+    <radialGradient id="haloAzul" cx="72%" cy="45%" r="35%">
+      <stop offset="0%" stop-color="rgba(74,144,217,0.55)" />
+      <stop offset="70%" stop-color="rgba(74,144,217,0.10)" />
+      <stop offset="100%" stop-color="rgba(74,144,217,0)" />
+    </radialGradient>
+    <!-- Halo ciano do eixo água (sutil, contraste) -->
+    <radialGradient id="haloCiano" cx="16%" cy="82%" r="30%">
+      <stop offset="0%" stop-color="rgba(63,181,198,0.35)" />
+      <stop offset="100%" stop-color="rgba(63,181,198,0)" />
+    </radialGradient>
+    <!-- Gradiente do "líquido" da caneta -->
+    <linearGradient id="liquido" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7FB3EA" />
+      <stop offset="100%" stop-color="#2B6CB0" />
+    </linearGradient>
+    <!-- Gradiente dourado do wordmark -->
+    <linearGradient id="wordmark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#B9D4F0" />
+    </linearGradient>
+    <!-- Chip -->
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4A90D9" />
+      <stop offset="100%" stop-color="#2B6CB0" />
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
+      <feOffset dx="0" dy="6" result="off" />
+      <feFlood flood-color="#000000" flood-opacity="0.35" />
+      <feComposite in2="off" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- BG -->
+  <rect width="1024" height="500" fill="url(#bg)" />
+  <rect width="1024" height="500" fill="url(#haloAzul)" />
+  <rect width="1024" height="500" fill="url(#haloCiano)" />
+
+  <!-- Grid sutil de fundo (dá tecnicidade sem poluir) -->
+  <g opacity="0.06" stroke="#FFFFFF" stroke-width="1">
+    <line x1="0" y1="125" x2="1024" y2="125" />
+    <line x1="0" y1="250" x2="1024" y2="250" />
+    <line x1="0" y1="375" x2="1024" y2="375" />
+    <line x1="256" y1="0" x2="256" y2="500" />
+    <line x1="512" y1="0" x2="512" y2="500" />
+    <line x1="768" y1="0" x2="768" y2="500" />
+  </g>
+
+  <!-- Partículas orbitais (mist) -->
+  <g opacity="0.35" fill="#4A90D9">
+    <circle cx="140" cy="80" r="2.5" />
+    <circle cx="220" cy="380" r="1.8" />
+    <circle cx="88" cy="220" r="2.2" />
+    <circle cx="60" cy="340" r="1.4" />
+    <circle cx="200" cy="140" r="1.6" />
+    <circle cx="880" cy="60" r="2.4" />
+    <circle cx="940" cy="180" r="1.8" />
+    <circle cx="820" cy="420" r="1.6" />
+    <circle cx="960" cy="340" r="2.0" />
+  </g>
+
+  <!-- COLUNA ESQUERDA — copy -->
+  <g transform="translate(72 138)">
+    <!-- Chip categoria -->
+    <g>
+      <rect x="0" y="0" width="248" height="34" rx="17" fill="url(#chip)" />
+      <text x="124" y="22" text-anchor="middle"
+            font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+            font-size="13" font-weight="700" letter-spacing="2.4"
+            fill="#FFFFFF">ASSISTENTE DE CANETA GLP-1</text>
+    </g>
+
+    <!-- Headline principal -->
+    <g transform="translate(0 82)">
+      <text x="0" y="0"
+            font-family="Georgia,'Times New Roman',serif"
+            font-size="64" font-weight="700" fill="url(#wordmark)"
+            font-style="italic">Nunca esqueça</text>
+      <text x="0" y="70"
+            font-family="Georgia,'Times New Roman',serif"
+            font-size="64" font-weight="700" fill="#FFFFFF">a dose.</text>
+    </g>
+
+    <!-- Subhead com nomes dos remédios (isca de busca) -->
+    <g transform="translate(0 214)">
+      <text x="0" y="0"
+            font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+            font-size="18" fill="#B9D4F0" letter-spacing="0.3">
+        Ozempic · Mounjaro · Wegovy · Saxenda
+      </text>
+      <text x="0" y="26"
+            font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+            font-size="15" fill="#8DA3C7" letter-spacing="0.2">
+        Registre. Evolua. Leve o relatório ao seu médico.
+      </text>
+    </g>
+  </g>
+
+  <!-- COLUNA DIREITA — caneta ilustrada com badges flutuantes -->
+  <g transform="translate(760 250)" filter="url(#softShadow)">
+    <!-- Rotação leve pra ficar dinâmica -->
+    <g transform="rotate(-14)">
+      <!-- Botão âmbar -->
+      <ellipse cx="0" cy="-186" rx="46" ry="26" fill="#F1C87C" />
+      <rect x="-40" y="-176" width="80" height="12" rx="5" fill="#E9A03C" />
+
+      <!-- Corpo (cápsula transparente) -->
+      <rect x="-62" y="-160" width="124" height="232" rx="30" ry="30"
+            fill="rgba(255,255,255,0.12)"
+            stroke="rgba(255,255,255,0.32)" stroke-width="1.6" />
+
+      <!-- Líquido -->
+      <rect x="-44" y="-140" width="88" height="192" rx="22" ry="22"
+            fill="url(#liquido)" opacity="0.95" />
+
+      <!-- Marcadores de dose -->
+      <line x1="-62" y1="-96" x2="62" y2="-96" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" />
+      <line x1="-62" y1="-50" x2="62" y2="-50" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" />
+      <line x1="-62" y1="-4"  x2="62" y2="-4"  stroke="rgba(255,255,255,0.5)" stroke-width="1.8" />
+
+      <!-- Letra R -->
+      <text x="0" y="-4" text-anchor="middle"
+            font-family="Georgia,'Times New Roman',serif"
+            font-size="128" font-weight="700"
+            fill="#FFFFFF" font-style="italic" opacity="0.98">R</text>
+
+      <!-- Base -->
+      <rect x="-48" y="72" width="96" height="26" rx="9" ry="9" fill="#0B1220" />
+
+      <!-- Agulha -->
+      <polygon points="-5,98 5,98 0,120" fill="#E1EAF5" />
+    </g>
+  </g>
+
+  <!-- Badges flutuantes ao redor da caneta (features-âncora) -->
+  <g font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-weight="700">
+    <!-- Badge 1: Lembrete -->
+    <g transform="translate(560 130)">
+      <rect x="0" y="0" width="130" height="34" rx="17"
+            fill="rgba(255,255,255,0.10)"
+            stroke="rgba(255,255,255,0.28)" stroke-width="1" />
+      <circle cx="18" cy="17" r="5" fill="#E9A03C" />
+      <text x="32" y="22" font-size="12" fill="#FFFFFF" letter-spacing="0.4">LEMBRETE 7 DIAS</text>
+    </g>
+    <!-- Badge 2: PDF médico -->
+    <g transform="translate(542 384)">
+      <rect x="0" y="0" width="150" height="34" rx="17"
+            fill="rgba(255,255,255,0.10)"
+            stroke="rgba(255,255,255,0.28)" stroke-width="1" />
+      <circle cx="18" cy="17" r="5" fill="#4A90D9" />
+      <text x="32" y="22" font-size="12" fill="#FFFFFF" letter-spacing="0.4">PDF PRO MÉDICO</text>
+    </g>
+    <!-- Badge 3: 15 sintomas Anvisa -->
+    <g transform="translate(878 258)">
+      <rect x="0" y="0" width="140" height="34" rx="17"
+            fill="rgba(255,255,255,0.10)"
+            stroke="rgba(255,255,255,0.28)" stroke-width="1" />
+      <circle cx="18" cy="17" r="5" fill="#E76F51" />
+      <text x="32" y="22" font-size="12" fill="#FFFFFF" letter-spacing="0.4">15 SINTOMAS BULA</text>
+    </g>
+  </g>
+
+  <!-- Micro-selo LGPD/HIPAA no rodapé esquerdo -->
+  <g transform="translate(72 456)" font-family="'Inter','Helvetica Neue',Arial,sans-serif">
+    <circle cx="6" cy="0" r="4" fill="#4FBFA8" />
+    <text x="18" y="4" font-size="11" fill="#8DA3C7" letter-spacing="1.6">
+      LGPD · PADRÃO HIPAA · GRÁTIS · SEM ANÚNCIOS
+    </text>
+  </g>
+</svg>
