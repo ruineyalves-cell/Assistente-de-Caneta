@@ -171,10 +171,13 @@ class FeaturePolicy {
   }
 
   /// Quotas do Free por período. Retorna null para features Pro-only.
+  ///
+  /// Camera de refeição: 3/dia — o suficiente para café/almoço/janta.
+  /// Além disso, aparece o upsell Premium (Lote 27).
   static ({int limite, Duration periodo})? quotaFree(Feature f) {
     switch (f) {
       case Feature.cameraRefeicao:
-        return (limite: 1, periodo: const Duration(days: 1));
+        return (limite: 3, periodo: const Duration(days: 1));
       case Feature.ocrPrescricao:
         return (limite: 1, periodo: const Duration(days: 7));
       case Feature.pdfMedico:
