@@ -36,6 +36,9 @@ r.delete('/lgpd/conta', requireAuth, audit('delete', 'conta'), lgpd.excluirConta
 const paciente = [requireAuth, requireRole('paciente'), requireConsent];
 r.put('/pacientes/perfil', ...paciente, audit('update', 'patient_profile'), patient.salvarPerfil);
 r.get('/pacientes/perfil', ...paciente, audit('read', 'patient_profile'), patient.obterPerfil);
+// Lote 32.2 — Pré-consulta determinística. Auditamos como "read" em
+// daily_logs porque a agregação passa por todos os logs do mês.
+r.get('/pacientes/pre-consulta', ...paciente, audit('read', 'pre_consulta'), patient.preConsulta);
 r.get('/pacientes/profissionais', ...paciente, patient.listarProfissionais);
 r.post('/pacientes/profissionais', ...paciente, patient.convidarProfissional);
 r.delete('/pacientes/profissionais/:id', ...paciente, patient.revogarProfissional);
