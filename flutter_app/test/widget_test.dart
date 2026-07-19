@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:assistente_caneta/main.dart';
 import 'package:assistente_caneta/services/auth_service.dart';
+import 'package:assistente_caneta/services/premium_service.dart';
+import 'package:assistente_caneta/services/theme_controller.dart';
 import 'package:assistente_caneta/utils/constants.dart';
 
 void main() {
@@ -12,6 +14,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MyApp(
       authService: AuthService(),
+      premiumService: PremiumService(),
+      themeController: ThemeController(),
       disclaimerAceitoInicial: false,
     ));
     await tester.pump();
@@ -24,6 +28,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MyApp(
       authService: AuthService(),
+      premiumService: PremiumService(),
+      themeController: ThemeController(),
       disclaimerAceitoInicial: true,
     ));
     await tester.pump();
