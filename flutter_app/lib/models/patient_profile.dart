@@ -104,6 +104,11 @@ class ProfilePrefsKeys {
   static const String sexoBiologico = 'profile_sexo_biologico';
   static const String eixoFarmacologico = 'profile_eixo_farmacologico';
   static const String ultimaDoseIso = 'profile_ultima_dose_iso';
+  // Lote 29 — Meta de peso definida no onboarding. Persistida local:
+  // o backend não tem coluna para meta de peso (só pesoInicialKg em
+  // patient_profiles); Lote 31 pode subir isso pro backend quando o
+  // sync de peso/sintomas entrar.
+  static const String metaPesoKg = 'profile_meta_peso_kg';
 }
 
 /// Dados de perfil vindos do backend (`GET /api/pacientes/perfil`).

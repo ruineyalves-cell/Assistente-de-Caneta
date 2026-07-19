@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/disclaimer_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/profile_config_screen.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
@@ -59,6 +60,10 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final disclaimerAceito =
       prefs.getBool(AppConstants.keyDisclaimerAceito) ?? false;
+  // Lote 29 — Onboarding em 3 telas. Só é exibido uma vez após o
+  // primeiro login/registro; usuário pode pular e configurar depois.
+  final onboardingCompleto =
+      prefs.getBool(AppConstants.keyOnboardingCompleto) ?? false;
 
   // Verifica se o app foi lançado a partir do App Widget do Android
   // (Lote 17). Se sim, `initialUri` fica preenchido e usado depois para
@@ -85,6 +90,7 @@ void main() async {
     premiumService: premiumService,
     themeController: themeController,
     disclaimerAceitoInicial: disclaimerAceito,
+    onboardingCompletoInicial: onboardingCompleto,
     initialWidgetUri: initialUri,
   ));
 }
@@ -94,6 +100,7 @@ class MyApp extends StatefulWidget {
   final PremiumService premiumService;
   final ThemeController themeController;
   final bool disclaimerAceitoInicial;
+  final bool onboardingCompletoInicial;
 
   /// URI vinda do App Widget do Android (Lote 17) — se
   /// `recorpo://scanner-refeicao`, o app roteia direto para a
@@ -106,6 +113,7 @@ class MyApp extends StatefulWidget {
     required this.premiumService,
     required this.themeController,
     required this.disclaimerAceitoInicial,
+    required this.onboardingCompletoInicial,
     this.initialWidgetUri,
   });
 
@@ -115,6 +123,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late bool _disclaimerAceito;
+  late bool _onboardingCompleto;
   final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
   bool _widgetIntentConsumido = false;
 
@@ -122,6 +131,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _disclaimerAceito = widget.disclaimerAceitoInicial;
+    _onboardingCompleto = widget.onboardingCompletoInicial;
     // Caso o disclaimer já esteja aceito e o app tenha sido lançado
     // pelo widget, agenda a navegação para depois do primeiro frame.
     if (_disclaimerAceito) _talvezAbrirTelaDoWidget();
@@ -130,6 +140,10 @@ class _MyAppState extends State<MyApp> {
   void _onDisclaimerAceito() {
     setState(() => _disclaimerAceito = true);
     _talvezAbrirTelaDoWidget();
+  }
+
+  void _onOnboardingConcluido() {
+    setState(() => _onboardingCompleto = true);
   }
 
   /// Se o app foi lançado pelo widget de câmera E o disclaimer já foi
@@ -189,9 +203,17 @@ class _MyAppState extends State<MyApp> {
           home: _disclaimerAceito
               ? Consumer<AuthService>(
                   builder: (context, authService, _) {
-                    return authService.isAuthenticated
-                        ? const DashboardPage()
-                        : const LoginPage();
+                    if (!authService.isAuthenticated) {
+                      return const LoginPage();
+                    }
+                    // Lote 29 — Após login/registro, exibe o onboarding
+                    // uma única vez. Usuário pode pular; a flag é
+                    // persistida em SharedPreferences ao concluir/pular.
+                    if (!_onboardingCompleto) {
+                      return OnboardingScreen(
+                          onConcluir: _onOnboardingConcluido);
+                    }
+                    return const DashboardPage();
                   },
                 )
               : DisclaimerScreen(onAceito: _onDisclaimerAceito),
