@@ -29,9 +29,7 @@ class PaywallScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Recorpo Premium'),
         elevation: 0,
-        backgroundColor: AppColors.fundoFrio,
-      ),
-      backgroundColor: AppColors.fundoFrio,
+        ),
       body: SafeArea(
         child: Consumer<PremiumService>(
           builder: (context, premium, _) {
@@ -45,7 +43,8 @@ class PaywallScreen extends StatelessWidget {
                 children: [
                   _hero(),
                   const SizedBox(height: 24),
-                  ..._vantagens.map((v) => _linhaBeneficio(v.$1, v.$2)),
+                  ..._vantagens
+                      .map((v) => _linhaBeneficio(context, v.$1, v.$2)),
                   const SizedBox(height: 24),
                   if (!premium.billingDisponivel)
                     _avisoBillingIndisponivel()
@@ -131,15 +130,28 @@ class PaywallScreen extends StatelessWidget {
     );
   }
 
-  Widget _linhaBeneficio(IconData icone, String texto) {
+  Widget _linhaBeneficio(BuildContext context, IconData icone, String texto) {
+    // Lote 28 — cor explícita do onSurface para não herdar cinza claro
+    // do tema, que sumia sobre o fundo branco.
+    final corTexto = Theme.of(context).colorScheme.onSurface;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Icon(icone, color: AppColors.azulClinico, size: 22),
           const SizedBox(width: 12),
-          Expanded(child: Text(texto, style: const TextStyle(fontSize: 14))),
-          const Icon(Icons.check_circle, color: AppColors.verdeConfirma, size: 20),
+          Expanded(
+            child: Text(
+              texto,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: corTexto,
+              ),
+            ),
+          ),
+          const Icon(Icons.check_circle,
+              color: AppColors.verdeConfirma, size: 20),
         ],
       ),
     );

@@ -373,45 +373,92 @@ class _LoginPageState extends State<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: 36),
-                        TextField(
-                          controller: emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            hintText: 'seu@email.com',
-                            prefixIcon: const Icon(Icons.mail_outline),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        Builder(builder: (context) {
+                          // Lote 28 — Cores dos campos adaptativas ao tema.
+                          // No dark o branco fixo ficava agressivo e o
+                          // placeholder cinza sumia; agora usamos surface do
+                          // ColorScheme e onSurface pro texto/ícones.
+                          final ehDark = Theme.of(context).brightness ==
+                              Brightness.dark;
+                          final fill = ehDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.white;
+                          final onSurface =
+                              Theme.of(context).colorScheme.onSurface;
+                          final iconColor = onSurface.withValues(alpha: 0.7);
+                          final borderColor = ehDark
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : Colors.black.withValues(alpha: 0.1);
+                          return Column(children: [
+                            TextField(
+                              controller: emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              style: TextStyle(color: onSurface, fontSize: 15),
+                              decoration: InputDecoration(
+                                labelText: 'Email',
+                                labelStyle: TextStyle(
+                                    color:
+                                        onSurface.withValues(alpha: 0.75)),
+                                hintText: 'seu@email.com',
+                                hintStyle: TextStyle(
+                                    color:
+                                        onSurface.withValues(alpha: 0.4)),
+                                prefixIcon: Icon(Icons.mail_outline,
+                                    color: iconColor),
+                                filled: true,
+                                fillColor: fill,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: passwordController,
-                          obscureText: _obscureSenha,
-                          decoration: InputDecoration(
-                            labelText: 'Senha',
-                            hintText: '••••••••',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: passwordController,
+                              obscureText: _obscureSenha,
+                              style: TextStyle(color: onSurface, fontSize: 15),
+                              decoration: InputDecoration(
+                                labelText: 'Senha',
+                                labelStyle: TextStyle(
+                                    color:
+                                        onSurface.withValues(alpha: 0.75)),
+                                hintText: '••••••••',
+                                hintStyle: TextStyle(
+                                    color:
+                                        onSurface.withValues(alpha: 0.4)),
+                                prefixIcon: Icon(Icons.lock_outline,
+                                    color: iconColor),
+                                filled: true,
+                                fillColor: fill,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                      _obscureSenha
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: iconColor),
+                                  tooltip: _obscureSenha
+                                      ? 'Mostrar senha'
+                                      : 'Ocultar senha',
+                                  onPressed: () => setState(
+                                      () => _obscureSenha = !_obscureSenha),
+                                ),
+                              ),
                             ),
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscureSenha
-                                  ? Icons.visibility_off
-                                  : Icons.visibility),
-                              tooltip: _obscureSenha
-                                  ? 'Mostrar senha'
-                                  : 'Ocultar senha',
-                              onPressed: () => setState(
-                                  () => _obscureSenha = !_obscureSenha),
-                            ),
-                          ),
-                        ),
+                          ]);
+                        }),
                         if (errorMessage != null) ...[
                           const SizedBox(height: 16),
                           Container(
