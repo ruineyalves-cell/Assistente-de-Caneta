@@ -118,6 +118,45 @@ class ProfilePrefsKeys {
   static const String doseReminderWeekday = 'profile_dose_reminder_weekday';
   static const String doseReminderHour = 'profile_dose_reminder_hour';
   static const String doseReminderMinute = 'profile_dose_reminder_minute';
+
+  // Lote 32 — Último local escolhido no WeightQuickSheet. Serve pra
+  // pré-selecionar o chip no próximo uso (a maioria pesa sempre no
+  // mesmo lugar). Guarda o `LocalPesagem.name`.
+  static const String ultimoLocalPesagem = 'profile_ultimo_local_pesagem';
+}
+
+/// Onde o usuário costuma se pesar. Fica em prefs (não envolve
+/// backend) porque é preferência de UX. O local eventual entra no
+/// campo `alimentos` do log ("Peso: 87.2kg @ academia"), pra que o PDF
+/// médico possa exibir como observação sem exigir nova coluna.
+enum LocalPesagem { casa, academia, farmacia, clinica }
+
+extension LocalPesagemLabel on LocalPesagem {
+  String get label {
+    switch (this) {
+      case LocalPesagem.casa:
+        return 'Casa';
+      case LocalPesagem.academia:
+        return 'Academia';
+      case LocalPesagem.farmacia:
+        return 'Farmácia';
+      case LocalPesagem.clinica:
+        return 'Clínica';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case LocalPesagem.casa:
+        return '🏠';
+      case LocalPesagem.academia:
+        return '💪';
+      case LocalPesagem.farmacia:
+        return '💊';
+      case LocalPesagem.clinica:
+        return '🏥';
+    }
+  }
 }
 
 /// Dados de perfil vindos do backend (`GET /api/pacientes/perfil`).
