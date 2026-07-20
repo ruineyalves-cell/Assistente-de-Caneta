@@ -55,6 +55,9 @@ r.get('/logs/dashboard', ...paciente, audit('read', 'dashboard'), logs.dashboard
 // auditamos como "read" porque a imagem passa pelo servidor mas
 // deliberadamente NÃO persiste em disco (só pra IA externa efêmera).
 r.post('/ia/refeicao', ...paciente, audit('read', 'ia_refeicao'), ia.analisar);
+// Lote 32.8 — Rótulo alimentar + bula (mesma engine Gemini).
+r.post('/ia/rotulo', ...paciente, audit('read', 'ia_rotulo'), ia.analisarRotulo);
+r.post('/ia/bula', ...paciente, audit('read', 'ia_bula'), ia.analisarBula);
 
 // --- Portal do profissional (read-only; auditoria com titular = paciente acessado) ---
 const prof = [requireAuth, requireRole('profissional')];
