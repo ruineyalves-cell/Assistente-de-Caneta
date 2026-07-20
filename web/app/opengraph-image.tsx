@@ -81,7 +81,7 @@ export default function OpengraphImage() {
             opacity: 0.55,
           }}
         >
-          <div>recorpo.com.br</div>
+          <div>www.recorpo.com.br</div>
           <div>Disponível na Play Store</div>
         </div>
       </div>

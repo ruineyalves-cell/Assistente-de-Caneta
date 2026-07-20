@@ -3,6 +3,7 @@ import Nav from '@/components/nav';
 import Footer from '@/components/footer';
 import EixoCards from '@/components/eixo-cards';
 import RevealOnScroll from '@/components/reveal-on-scroll';
+import ScreenshotsGallery from '@/components/screenshots-gallery';
 
 // R3F precisa ser client-side. WebGL pode travar em browsers headless
 // (preview interno) — verificamos via env var para desabilitar o Canvas
@@ -13,7 +14,7 @@ const Hero3D = disableCanvas
   ? null
   : dynamic(() => import('@/components/hero-3d'), {
       ssr: false,
-      loading: () => <div className="w-full h-[520px] md:h-[620px]" />,
+      loading: () => <div className="w-full h-[420px] md:h-[500px]" />,
     });
 
 export default function Home() {
@@ -78,6 +79,26 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ===== SCREENSHOTS DO APP ===== */}
+      <RevealOnScroll>
+        <section id="app" className="relative max-w-6xl mx-auto px-5 py-24">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <p className="text-[11px] tracking-[0.28em] font-semibold text-brand-primaryLight uppercase mb-3">
+              Por dentro do app
+            </p>
+            <h2 className="font-serif text-4xl md:text-5xl text-recorpo-text">
+              Sério e claro, do onboarding ao PDF do médico.
+            </h2>
+            <p className="mt-4 text-recorpo-dim">
+              Cinco telas que resumem o dia-a-dia com o Recorpo. Toca em qualquer
+              uma pra abrir em foco.
+            </p>
+          </div>
+
+          <ScreenshotsGallery />
+        </section>
+      </RevealOnScroll>
 
       {/* ===== EIXOS ===== */}
       <RevealOnScroll>
@@ -146,11 +167,11 @@ export default function Home() {
 /** Placeholder ilustrativo para quando o Canvas 3D é desabilitado. */
 function HeroFallback() {
   return (
-    <div className="relative w-full h-[520px] md:h-[620px] flex items-center justify-center">
+    <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden>
         <div className="w-[380px] h-[380px] md:w-[520px] md:h-[520px] rounded-full bg-brand-primary/30 blur-[100px] animate-pulseSoft" />
       </div>
-      <svg viewBox="0 0 220 480" className="relative h-[380px] md:h-[520px]" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <svg viewBox="0 0 220 480" className="relative h-[320px] md:h-[420px]" xmlns="http://www.w3.org/2000/svg" aria-hidden>
         <defs>
           <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#1A2540" />

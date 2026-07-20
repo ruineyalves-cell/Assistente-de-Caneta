@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <title>Recorpo — Screenshot 3: Lembrete semanal da dose</title>
+  <defs>
+    <radialGradient id="pageBg" cx="50%" cy="10%" r="90%">
+      <stop offset="0%" stop-color="#1B3E6C" />
+      <stop offset="50%" stop-color="#0F2544" />
+      <stop offset="100%" stop-color="#070E1A" />
+    </radialGradient>
+    <radialGradient id="glowT" cx="50%" cy="0%" r="45%">
+      <stop offset="0%" stop-color="rgba(233,160,60,0.35)" />
+      <stop offset="100%" stop-color="rgba(233,160,60,0)" />
+    </radialGradient>
+    <linearGradient id="appBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#131C2E" />
+      <stop offset="100%" stop-color="#0B1220" />
+    </linearGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4A90D9" />
+      <stop offset="100%" stop-color="#2B6CB0" />
+    </linearGradient>
+    <linearGradient id="alertGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F1C87C" />
+      <stop offset="100%" stop-color="#E9A03C" />
+    </linearGradient>
+    <linearGradient id="wordmark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" /><stop offset="100%" stop-color="#F4D9AC" />
+    </linearGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18" />
+      <feOffset dx="0" dy="24" result="off" />
+      <feFlood flood-color="#000000" flood-opacity="0.55" />
+      <feComposite in2="off" operator="in" />
+      <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#pageBg)" />
+  <rect width="1080" height="1920" fill="url(#glowT)" />
+
+  <!-- HEADLINE -->
+  <g transform="translate(80 148)" font-family="'Inter','Helvetica Neue',Arial,sans-serif">
+    <text x="0" y="0" font-size="26" font-weight="700" letter-spacing="6" fill="#E9A03C">O #1 PROBLEMA RESOLVIDO</text>
+    <text x="0" y="90" font-size="82" font-weight="800" font-family="Georgia,serif"
+          fill="url(#wordmark)" font-style="italic">Nunca esqueça</text>
+    <text x="0" y="176" font-size="82" font-weight="800" font-family="Georgia,serif" fill="#FFFFFF">a aplicação.</text>
+    <text x="0" y="232" font-size="22" fill="#8DA3C7">
+      Alerta na véspera às 20h + no dia no horário certo.
+    </text>
+  </g>
+
+  <!-- MOCKUP -->
+  <g transform="translate(220 460)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="640" height="1280" rx="72" ry="72" fill="#1A2540" />
+    <rect x="10" y="10" width="620" height="1260" rx="64" ry="64" fill="url(#appBg)" />
+
+    <rect x="240" y="26" width="160" height="26" rx="13" fill="#0B1220" />
+    <text x="60" y="76" font-family="'Inter',Arial,sans-serif" font-size="18" fill="#9AA6B8">9:41</text>
+    <g transform="translate(560 66)">
+      <rect x="0" y="0" width="8" height="12" rx="2" fill="#9AA6B8" />
+      <rect x="12" y="2" width="8" height="10" rx="2" fill="#9AA6B8" opacity="0.7" />
+      <rect x="24" y="4" width="8" height="8" rx="2" fill="#9AA6B8" opacity="0.4" />
+    </g>
+
+    <!-- Título tela -->
+    <g transform="translate(48 120)" font-family="'Inter',Arial,sans-serif">
+      <text x="0" y="0" font-size="14" fill="#8DA3C7">← Lembrete da dose</text>
+    </g>
+
+    <!-- Card hero âmbar -->
+    <g transform="translate(48 170)" font-family="'Inter',Arial,sans-serif">
+      <rect x="0" y="0" width="544" height="150" rx="24" fill="url(#alertGrad)" />
+      <text x="30" y="50" font-size="48">💉</text>
+      <text x="106" y="60" font-size="22" font-weight="700" fill="#141005">Nunca mais esqueça</text>
+      <text x="106" y="88" font-size="17" fill="#3D2A0A">a aplicação semanal.</text>
+      <text x="106" y="118" font-size="14" fill="#3D2A0A" opacity="0.85">
+        O app te avisa na véspera e no dia.
+      </text>
+    </g>
+
+    <!-- Toggle habilitar -->
+    <g transform="translate(48 360)" font-family="'Inter',Arial,sans-serif">
+      <rect x="0" y="0" width="544" height="80" rx="16" fill="rgba(255,255,255,0.04)"
+            stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+      <text x="20" y="34" font-size="18" font-weight="700" fill="#F1F5FB">Ativar lembrete semanal</text>
+      <text x="20" y="60" font-size="13" fill="#9AA6B8">Dois alertas por semana.</text>
+      <!-- Switch on -->
+      <rect x="454" y="24" width="70" height="34" rx="17" fill="#2B6CB0" />
+      <circle cx="504" cy="41" r="14" fill="#FFFFFF" />
+    </g>
+
+    <!-- Dia da semana -->
+    <g transform="translate(48 480)" font-family="'Inter',Arial,sans-serif">
+      <text x="0" y="0" font-size="13" font-weight="700" letter-spacing="3" fill="#8DA3C7">DIA DA SEMANA</text>
+      <g transform="translate(0 20)">
+        <g><rect x="0" y="0" width="66" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" /><text x="33" y="27" text-anchor="middle" font-size="14" fill="#9AA6B8">Seg</text></g>
+        <g transform="translate(72 0)"><rect x="0" y="0" width="66" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" /><text x="33" y="27" text-anchor="middle" font-size="14" fill="#9AA6B8">Ter</text></g>
+        <g transform="translate(144 0)"><rect x="0" y="0" width="66" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" /><text x="33" y="27" text-anchor="middle" font-size="14" fill="#9AA6B8">Qua</text></g>
+        <g transform="translate(216 0)">
+          <rect x="0" y="0" width="66" height="42" rx="21" fill="#2B6CB0" />
+          <text x="33" y="27" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">Qui</text>
+        </g>
+        <g transform="translate(288 0)"><rect x="0" y="0" width="66" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" /><text x="33" y="27" text-anchor="middle" font-size="14" fill="#9AA6B8">Sex</text></g>
+        <g transform="translate(360 0)"><rect x="0" y="0" width="66" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" /><text x="33" y="27" text-anchor="middle" font-size="14" fill="#9AA6B8">Sáb</text></g>
+        <g transform="translate(432 0)"><rect x="0" y="0" width="66" height="42" rx="21" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" /><text x="33" y="27" text-anchor="middle" font-size="14" fill="#9AA6B8">Dom</text></g>
+      </g>
+    </g>
+
+    <!-- Horário -->
+    <g transform="translate(48 610)" font-family="'Inter',Arial,sans-serif">
+      <text x="0" y="0" font-size="13" font-weight="700" letter-spacing="3" fill="#8DA3C7">HORÁRIO DA APLICAÇÃO</text>
+      <rect x="0" y="20" width="544" height="80" rx="16" fill="rgba(255,255,255,0.04)"
+            stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+      <text x="30" y="72" font-size="18" fill="#8DA3C7">🕐</text>
+      <text x="72" y="76" font-size="36" font-weight="700" fill="#F1F5FB">09:00</text>
+      <text x="484" y="66" font-size="14" fill="#4A90D9" font-weight="700">Alterar</text>
+    </g>
+
+    <!-- Info -->
+    <g transform="translate(48 750)" font-family="'Inter',Arial,sans-serif">
+      <rect x="0" y="0" width="544" height="126" rx="16" fill="rgba(74,144,217,0.08)"
+            stroke="rgba(74,144,217,0.28)" stroke-width="1" />
+      <text x="20" y="30" font-size="18" fill="#4A90D9">ℹ️</text>
+      <text x="52" y="34" font-size="14" fill="#B9D4F0">Você recebe dois alertas:</text>
+      <text x="52" y="60" font-size="14" fill="#8DA3C7">• 20h da véspera — “tire a caneta da geladeira”</text>
+      <text x="52" y="86" font-size="14" fill="#8DA3C7">• Dia da aplicação — no horário escolhido</text>
+      <text x="52" y="112" font-size="12" fill="#6B7893" font-style="italic">Funciona offline. Não gasta bateria.</text>
+    </g>
+
+    <!-- CTA -->
+    <g transform="translate(48 940)">
+      <rect x="0" y="0" width="544" height="72" rx="36" fill="url(#cta)" />
+      <text x="272" y="47" text-anchor="middle" font-family="'Inter',Arial,sans-serif"
+            font-size="22" font-weight="700" fill="#FFFFFF">Salvar lembrete</text>
+    </g>
+
+    <rect x="240" y="1210" width="160" height="6" rx="3" fill="rgba(255,255,255,0.35)" />
+  </g>
+
+  <!-- SUBHEAD -->
+  <g transform="translate(80 1810)" font-family="'Inter',Arial,sans-serif">
+    <text x="0" y="0" font-size="24" fill="#F4D9AC" font-weight="600">
+      Ozempic e Mounjaro são semanais. Esquecer machuca a adesão.
+    </text>
+    <text x="0" y="34" font-size="22" fill="#8DA3C7">O Recorpo lembra por você — sem drama.</text>
+  </g>
+</svg>

@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       { userAgent: '*', allow: '/', disallow: ['/portal/'] },
     ],
-    sitemap: 'https://recorpo.com.br/sitemap.xml',
-    host: 'https://recorpo.com.br',
+    sitemap: 'https://www.recorpo.com.br/sitemap.xml',
+    host: 'https://www.recorpo.com.br',
   };
 }

@@ -16,7 +16,7 @@ const instrument = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://recorpo.com.br'),
+  metadataBase: new URL('https://www.recorpo.com.br'),
   title: {
     default: 'Recorpo — Assistente de Caneta GLP-1',
     template: '%s · Recorpo',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
       'Registre, acompanhe e compartilhe sua jornada de tratamento GLP-1 com quem cuida de você.',
     type: 'website',
     locale: 'pt_BR',
-    url: 'https://recorpo.com.br',
+    url: 'https://www.recorpo.com.br',
     siteName: 'Recorpo',
   },
   twitter: {
