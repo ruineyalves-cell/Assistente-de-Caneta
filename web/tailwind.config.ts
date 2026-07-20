@@ -75,11 +75,41 @@ const config: Config = {
           '0%, 100%': { opacity: '0.6' },
           '50%': { opacity: '1' },
         },
+        'hero-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-14px)' },
+        },
+        'hero-floatSlow': {
+          '0%, 100%': { transform: 'rotate(-4deg) translateY(0)' },
+          '50%': { transform: 'rotate(-4deg) translateY(-10px)' },
+        },
+        'hero-floatFast': {
+          '0%, 100%': { transform: 'rotate(5deg) translateY(0)' },
+          '50%': { transform: 'rotate(5deg) translateY(-8px)' },
+        },
+        'hero-draw': {
+          '0%': { strokeDashoffset: '290' },
+          '60%, 100%': { strokeDashoffset: '0' },
+        },
+        'hero-water': {
+          '0%, 100%': { strokeDashoffset: '30' },
+          '50%': { strokeDashoffset: '15' },
+        },
+        'hero-waterRing': {
+          '0%, 100%': { strokeDashoffset: '55' },
+          '50%': { strokeDashoffset: '30' },
+        },
       },
       animation: {
         drift: 'drift 22s ease-in-out infinite',
         rise: 'rise 1s cubic-bezier(0.2,0.7,0.2,1) both',
         pulseSoft: 'pulseSoft 4s ease-in-out infinite',
+        'hero-float': 'hero-float 6s ease-in-out infinite',
+        'hero-floatSlow': 'hero-floatSlow 8s ease-in-out infinite',
+        'hero-floatFast': 'hero-floatFast 5s ease-in-out infinite',
+        'hero-draw': 'hero-draw 3.2s ease-out infinite',
+        'hero-water': 'hero-water 5s ease-in-out infinite',
+        'hero-waterRing': 'hero-waterRing 6s ease-in-out infinite',
       },
     },
   },
