@@ -10,7 +10,7 @@
 -keep class io.flutter.view.** { *; }
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
--keep class com.example.assistente_caneta.** { *; }
+-keep class br.com.recorpo.app.** { *; }
 
 # ------- google_mlkit_text_recognition (Lote 10) ----------
 # O package referencia por reflection as classes dos scripts opcionais
@@ -40,8 +40,8 @@
 # reflection pelo Android — sem estas regras o Dart isolate nunca é
 # disparado em release.
 -keep class es.antonborri.home_widget.** { *; }
--keep class com.example.assistente_caneta.RefeicaoWidgetProvider { *; }
--keep class com.example.assistente_caneta.AguaWidgetProvider { *; }
+-keep class br.com.recorpo.app.RefeicaoWidgetProvider { *; }
+-keep class br.com.recorpo.app.AguaWidgetProvider { *; }
 
 # ------- Kotlin stdlib / coroutines (usadas por plugins nativos) ---
 -keep class kotlin.Metadata { *; }

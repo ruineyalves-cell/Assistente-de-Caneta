@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import LegalLayout from '@/components/legal-layout';
-import { secoesTermos, versaoTermos } from '@/lib/termos';
+import { secoesTermos, versaoTermos, dataVigencia } from '@/lib/termos';
 
 export const metadata: Metadata = {
   title: 'Termos de Uso',
@@ -12,7 +12,7 @@ export default function TermosPage() {
   return (
     <LegalLayout
       titulo="Termos de Uso"
-      subtitulo={`Recorpo (Assistente de Caneta) · versão ${versaoTermos}.`}
+      subtitulo={`Recorpo (Assistente de Caneta) · versão ${versaoTermos} · em vigor a partir de ${dataVigencia}.`}
     >
       <div className="space-y-8">
         {secoesTermos.map((s) => (
@@ -32,9 +32,15 @@ export default function TermosPage() {
       <div className="mt-14 p-6 rounded-2xl border border-white/[0.08] bg-recorpo-surface/60">
         <p className="text-sm text-recorpo-dim">
           Ao instalar e usar o Recorpo, você declara ter lido e concordado com
-          estes termos, incluindo as menções à LGPD e ao padrão HIPAA, e
-          consente com o tratamento dos seus dados de saúde para a finalidade
-          de acompanhamento de conformidade.
+          estes Termos e com nossa{' '}
+          <a
+            href="/privacidade"
+            className="text-brand-primaryLight underline underline-offset-2"
+          >
+            Política de Privacidade
+          </a>
+          , consentindo com o tratamento dos seus dados de saúde para a
+          finalidade de acompanhamento de conformidade.
         </p>
       </div>
     </LegalLayout>

@@ -1,4 +1,4 @@
-package com.example.assistente_caneta
+package br.com.recorpo.app
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
