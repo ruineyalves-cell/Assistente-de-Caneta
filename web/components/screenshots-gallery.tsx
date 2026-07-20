@@ -85,7 +85,7 @@ export default function ScreenshotsGallery() {
       aria-label="Screenshots do app Recorpo"
     >
       {/* Palco: 3 imagens (anterior, atual, próxima) com destaque no meio */}
-      <div className="relative h-[560px] sm:h-[640px] md:h-[720px] flex items-center justify-center overflow-hidden">
+      <div className="relative h-[540px] sm:h-[620px] md:h-[700px] flex items-center justify-center overflow-hidden">
         {/* Halo por trás do card ativo */}
         <div
           aria-hidden
@@ -137,26 +137,19 @@ export default function ScreenshotsGallery() {
               }}
             >
               <div
-                className={`relative w-[260px] sm:w-[300px] md:w-[340px] aspect-[9/19.5] rounded-[36px] overflow-hidden border transition-shadow ${
+                className={`relative w-[280px] sm:w-[340px] md:w-[380px] aspect-[9/16] rounded-3xl overflow-hidden border transition-shadow ${
                   isActive
                     ? 'border-brand-primaryLight shadow-glow'
                     : 'border-white/[0.08] shadow-2xl shadow-black/60'
                 }`}
               >
-                {/* Molduras estilo aparelho: notch + bordas escuras */}
-                <div className="absolute inset-0 bg-black" aria-hidden />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={s.file}
                   alt={s.title}
-                  className="relative w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   loading={i < 2 ? 'eager' : 'lazy'}
                   draggable={false}
-                />
-                {/* Notch superior */}
-                <div
-                  aria-hidden
-                  className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full opacity-90"
                 />
                 {/* Reflexo diagonal sutil */}
                 <div
