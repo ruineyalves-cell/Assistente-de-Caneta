@@ -35,6 +35,10 @@ class NotificationService {
   // Lote 32.4 — Alerta clínico (sintoma persistente etc.). Frequência
   // limitada a 1× por semana pela chamada (HomePage._talvezNotificar).
   static const int _idAlertaClinico = 1007;
+  // Lote 32.7 — Hidratação inteligente (13h, se abaixo da meta) e
+  // check-in mensal (dia 1 às 10h).
+  static const int _idHidratacaoMeioDia = 1008;
+  static const int _idCheckInMensal = 1009;
 
   bool get suportado => !kIsWeb;
 
@@ -304,6 +308,85 @@ class NotificationService {
     if (!suportado) return;
     await AwesomeNotifications().cancel(_idDoseSemanaVespera);
     await AwesomeNotifications().cancel(_idDoseSemanaDia);
+  }
+
+  /// Lote 32.7 — Hidratação inteligente: dispara às 13h de hoje se o
+  /// usuário está abaixo da meta. Reagendada a cada abertura do
+  /// dashboard, então o corpo reflete o estado corrente. Se `bateu ==
+  /// true` ou `faltamMl == 0`, cancela e nada é enviado.
+  ///
+  /// Se agora já passou das 13h, o Awesome ignora o slot de hoje e cai
+  /// no de amanhã — comportamento OK: o lembrete perdido do dia é
+  /// omitido em vez de virar um push atrasado inútil.
+  Future<void> agendarHidratacaoMeioDia({
+    required bool bateu,
+    required int faltamMl,
+    required String? primeiroNome,
+  }) async {
+    if (!suportado) return;
+    await inicializar();
+    await AwesomeNotifications().cancel(_idHidratacaoMeioDia);
+    if (bateu || faltamMl <= 0) return;
+
+    final nome = _saudarNome(primeiroNome);
+    final litros = (faltamMl / 1000).toStringAsFixed(1).replaceAll('.', ',');
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idHidratacaoMeioDia,
+        channelKey: _canalDiario,
+        title: 'Hidratação de hoje 💧',
+        body:
+            '$nome, faltam $litros L pra bater a meta. Um copo agora ajuda muito.',
+        notificationLayout: NotificationLayout.Default,
+      ),
+      schedule: NotificationCalendar(
+        hour: 13,
+        minute: 0,
+        second: 0,
+        repeats: false,
+        allowWhileIdle: true,
+        preciseAlarm: true,
+      ),
+    );
+  }
+
+  Future<void> cancelarHidratacaoMeioDia() async {
+    if (!suportado) return;
+    await AwesomeNotifications().cancel(_idHidratacaoMeioDia);
+  }
+
+  /// Lote 32.7 — Check-in mensal: dia 1 de cada mês às 10h. Convite
+  /// pra abrir a pré-consulta e revisar o mês. Idempotente: chamar
+  /// múltiplas vezes só re-registra o mesmo slot.
+  Future<void> agendarCheckInMensal({required String? primeiroNome}) async {
+    if (!suportado) return;
+    await inicializar();
+    await AwesomeNotifications().cancel(_idCheckInMensal);
+    final nome = _saudarNome(primeiroNome);
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: _idCheckInMensal,
+        channelKey: _canalCelebracao,
+        title: 'Novo mês, novo resumo 📄',
+        body:
+            '$nome, dá pra ver o mês inteirinho num toque — bom material pra levar ao médico.',
+        notificationLayout: NotificationLayout.Default,
+      ),
+      schedule: NotificationCalendar(
+        day: 1,
+        hour: 10,
+        minute: 0,
+        second: 0,
+        repeats: true,
+        allowWhileIdle: true,
+        preciseAlarm: true,
+      ),
+    );
+  }
+
+  Future<void> cancelarCheckInMensal() async {
+    if (!suportado) return;
+    await AwesomeNotifications().cancel(_idCheckInMensal);
   }
 
   Future<void> cancelarDiarias() async {

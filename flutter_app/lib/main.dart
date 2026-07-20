@@ -1249,6 +1249,15 @@ class _HomePageState extends State<HomePage> {
     // e respeita o próprio limitador (1× por semana).
     unawaited(_talvezNotificarAlertas(alertas));
 
+    // Lote 32.7 — Reagenda hidratação inteligente + check-in mensal
+    // com base no estado do dashboard neste momento.
+    unawaited(_talvezNotificarContextuais(
+      prefs: prefs,
+      auth: auth,
+      metaAguaMlKgPerfil: perfil?.metaAguaMlKg,
+      pesoParaMetaKg: perfil?.pesoInicialKg,
+    ));
+
     // Lote 30 — Se o usuário configurou lembrete e o app foi reinstalado
     // ou reiniciado, reagenda para garantir persistência entre boots.
     if (lembreteHabilitado && (eixo?.envolveMedicacao ?? false)) {
@@ -1387,6 +1396,62 @@ class _HomePageState extends State<HomePage> {
     if (!ehDeHoje) return false;
     if (pesoAppUltimo == null) return true;
     return (pesoH - pesoAppUltimo).abs() >= 0.1;
+  }
+
+  /// Lote 32.7 — Reagenda 2 notificações contextuais a cada carregamento
+  /// do dashboard, respeitando os toggles do usuário:
+  ///   * Hidratação: 13h de hoje, se abaixo da meta.
+  ///   * Check-in mensal: dia 1 às 10h, recorrente.
+  Future<void> _talvezNotificarContextuais({
+    required SharedPreferences prefs,
+    required AuthService auth,
+    required double? metaAguaMlKgPerfil,
+    required double? pesoParaMetaKg,
+  }) async {
+    if (!mounted) return;
+    final notif = NotificationService();
+    if (!notif.suportado) return;
+    final primeiroNome = (auth.nome ?? '').trim().split(' ').first;
+
+    // Hidratação — só se o usuário tem meta E o toggle está ligado.
+    final hidratacaoOn =
+        prefs.getBool(ProfilePrefsKeys.notifHidratacao) ?? true;
+    if (hidratacaoOn && pesoParaMetaKg != null) {
+      final metaMlKg =
+          metaAguaMlKgPerfil ?? AppConstants.defaultMetaAguaMlkg;
+      final metaMl = (pesoParaMetaKg * metaMlKg).round();
+      // Consumido hoje: pega do LogsProvider (que já foi carregado pelo
+      // Consumer no build principal). Se ainda não pronto, assume 0
+      // — na próxima abertura reagendará com valor correto.
+      final logs = context.read<LogsProvider>().logs;
+      final agora = DateTime.now();
+      final logHoje = logs.cast<dynamic>().firstWhere(
+            (l) =>
+                l != null &&
+                l.data.year == agora.year &&
+                l.data.month == agora.month &&
+                l.data.day == agora.day,
+            orElse: () => null,
+          );
+      final consumidoMl = logHoje == null ? 0 : (logHoje.aguaMl ?? 0) as int;
+      final falta = metaMl - consumidoMl;
+      await notif.agendarHidratacaoMeioDia(
+        bateu: falta <= 0,
+        faltamMl: falta > 0 ? falta : 0,
+        primeiroNome: primeiroNome,
+      );
+    } else {
+      await notif.cancelarHidratacaoMeioDia();
+    }
+
+    // Check-in mensal — repetitivo. Se o toggle está desligado, cancela.
+    final mensalOn =
+        prefs.getBool(ProfilePrefsKeys.notifCheckInMensal) ?? true;
+    if (mensalOn) {
+      await notif.agendarCheckInMensal(primeiroNome: primeiroNome);
+    } else {
+      await notif.cancelarCheckInMensal();
+    }
   }
 
   /// Lote 32.4 — Notificação semanal quando há alerta ativo. Respeita
