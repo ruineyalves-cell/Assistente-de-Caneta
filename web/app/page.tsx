@@ -1,21 +1,9 @@
-import dynamic from 'next/dynamic';
 import Nav from '@/components/nav';
 import Footer from '@/components/footer';
 import EixoCards from '@/components/eixo-cards';
 import RevealOnScroll from '@/components/reveal-on-scroll';
 import ScreenshotsGallery from '@/components/screenshots-gallery';
-
-// R3F precisa ser client-side. WebGL pode travar em browsers headless
-// (preview interno) — verificamos via env var para desabilitar o Canvas
-// só no preview e manter o hero 3D em prod. Quando desabilitado, o
-// módulo three/R3F nem entra no bundle.
-const disableCanvas = process.env.NEXT_PUBLIC_DISABLE_3D === '1';
-const Hero3D = disableCanvas
-  ? null
-  : dynamic(() => import('@/components/hero-3d'), {
-      ssr: false,
-      loading: () => <div className="w-full h-[420px] md:h-[500px]" />,
-    });
+import HeroDashboard from '@/components/hero-dashboard';
 
 export default function Home() {
   return (
@@ -73,9 +61,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Coluna 3D — em preview headless, mostramos placeholder SVG */}
+          {/* Coluna direita — mockup de celular com dashboard */}
           <div className="relative">
-            {Hero3D ? <Hero3D /> : <HeroFallback />}
+            <HeroDashboard />
           </div>
         </div>
       </section>
@@ -161,51 +149,6 @@ export default function Home() {
 
       <Footer />
     </>
-  );
-}
-
-/** Placeholder ilustrativo para quando o Canvas 3D é desabilitado. */
-function HeroFallback() {
-  return (
-    <div className="relative w-full h-[420px] md:h-[500px] flex items-center justify-center">
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden>
-        <div className="w-[380px] h-[380px] md:w-[520px] md:h-[520px] rounded-full bg-brand-primary/30 blur-[100px] animate-pulseSoft" />
-      </div>
-      <svg viewBox="0 0 220 480" className="relative h-[320px] md:h-[420px]" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <defs>
-          <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#1A2540" />
-            <stop offset="1" stopColor="#0B1220" />
-          </linearGradient>
-          <linearGradient id="liquid" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#4A90D9" />
-            <stop offset="1" stopColor="#2B6CB0" />
-          </linearGradient>
-          <linearGradient id="btn" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#F1C87C" />
-            <stop offset="1" stopColor="#E9A03C" />
-          </linearGradient>
-        </defs>
-        {/* Botão superior */}
-        <ellipse cx="110" cy="34" rx="42" ry="30" fill="url(#btn)" />
-        <rect x="70" y="52" width="80" height="14" rx="7" fill="#4A90D9" />
-        {/* Corpo */}
-        <rect x="72" y="72" width="76" height="180" rx="12" fill="url(#body)" />
-        {/* Marcadores de dose */}
-        <line x1="72" y1="120" x2="148" y2="120" stroke="#4A90D9" strokeWidth="1.5" />
-        <line x1="72" y1="160" x2="148" y2="160" stroke="#4A90D9" strokeWidth="1.5" />
-        <line x1="72" y1="200" x2="148" y2="200" stroke="#4A90D9" strokeWidth="1.5" />
-        {/* Anel âmbar */}
-        <rect x="70" y="252" width="80" height="18" rx="4" fill="#E9A03C" />
-        {/* Cápsula com líquido */}
-        <rect x="80" y="272" width="60" height="110" rx="6" fill="#4A90D9" opacity="0.35" />
-        <rect x="94" y="284" width="32" height="90" rx="4" fill="url(#liquid)" />
-        {/* Base */}
-        <rect x="76" y="386" width="68" height="30" rx="6" fill="#0B1220" />
-        {/* Agulha */}
-        <polygon points="110,416 106,448 114,448" fill="#E1EAF5" />
-      </svg>
-    </div>
   );
 }
 
