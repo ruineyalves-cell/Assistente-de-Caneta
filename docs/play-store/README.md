@@ -99,7 +99,7 @@ vale a pena mesmo que gravado com CapCut ou similar.
 - [ ] Descrição completa ≤ 4000 caracteres (a nossa: ~3400).
 - [ ] Política de privacidade hospedada em URL pública → **usar
       https://recorpo.com.br/privacidade** quando o domínio estiver de pé.
-- [ ] Email de contato configurado — **contato@recorpo.com.br**.
+- [ ] Email de contato configurado — **recorpoapp@gmail.com**.
 - [ ] Categoria: **Saúde e fitness**.
 - [ ] Faixa etária: Todos, com aviso de conteúdo médico.
 - [ ] Anúncios: Não.

@@ -39,10 +39,10 @@ export default function Footer() {
             <li><Link href="/termos" className="hover:text-recorpo-text transition-colors">Termos de uso</Link></li>
             <li>
               <a
-                href="mailto:contato@recorpo.com.br"
+                href="mailto:recorpoapp@gmail.com"
                 className="hover:text-recorpo-text transition-colors"
               >
-                contato@recorpo.com.br
+                recorpoapp@gmail.com
               </a>
             </li>
           </ul>
