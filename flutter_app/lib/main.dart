@@ -45,6 +45,8 @@ import 'widgets/weight_quick_sheet.dart';
 import 'screens/effort_screen.dart';
 import 'screens/pre_consulta_screen.dart';
 import 'screens/report_screen.dart';
+import 'screens/rotulo_result_screen.dart';
+import 'screens/bula_result_screen.dart';
 import 'models/patient_profile.dart';
 import 'utils/constants.dart';
 import 'utils/validators.dart';
@@ -2148,6 +2150,19 @@ Future<void> abrirFluxoRefeicao(BuildContext context) async {
 /// Dois botões de scanner lado a lado: refeição (câmera do Lote 9) e
 /// prescrição (OCR do Lote 10). Ambos abrem tela cheia.
 class _ScannersRow extends StatelessWidget {
+  Future<void> _capturarPara(
+    BuildContext context, {
+    required Widget Function(XFile foto) telaResultado,
+  }) async {
+    final foto = await Navigator.of(context).push<XFile?>(
+      MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
+    );
+    if (foto == null || !context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => telaResultado(foto)),
+    );
+  }
+
   void _abrirPrescricao(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const DietScannerScreen()),
@@ -2162,26 +2177,63 @@ class _ScannersRow extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       padding: const EdgeInsets.symmetric(vertical: 14),
     );
-    return Row(
+    // Lote 32.8 — grid 2×2 com 4 scanners: refeição, rótulo, bula,
+    // prescrição. Rótulo e bula reusam CameraScannerScreen + telas
+    // de resultado que chamam Gemini.
+    return Column(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => abrirFluxoRefeicao(context),
-            icon: const Icon(Icons.camera_alt_outlined, size: 18),
-            label: const Text('Refeição',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            style: estilo,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => abrirFluxoRefeicao(context),
+                icon: const Icon(Icons.restaurant_outlined, size: 18),
+                label: const Text('Refeição',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: estilo,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _capturarPara(
+                  context,
+                  telaResultado: (f) => RotuloResultScreen(foto: f),
+                ),
+                icon: const Icon(Icons.label_outlined, size: 18),
+                label: const Text('Rótulo',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: estilo,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => _abrirPrescricao(context),
-            icon: const Icon(Icons.document_scanner_outlined, size: 18),
-            label: const Text('Prescrição',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            style: estilo,
-          ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _capturarPara(
+                  context,
+                  telaResultado: (f) => BulaResultScreen(foto: f),
+                ),
+                icon: const Icon(Icons.menu_book_outlined, size: 18),
+                label: const Text('Bula',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: estilo,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _abrirPrescricao(context),
+                icon: const Icon(Icons.document_scanner_outlined, size: 18),
+                label: const Text('Prescrição',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: estilo,
+              ),
+            ),
+          ],
         ),
       ],
     );

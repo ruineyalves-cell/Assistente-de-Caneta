@@ -418,6 +418,41 @@ class ApiService {
     }
   }
 
+  /// Lote 32.8 — Envia foto do rótulo alimentar. Resposta traz
+  /// macros por porção + confiança. Sem chave IA: { iaConfigurada: false }.
+  Future<Map<String, dynamic>> analisarRotuloIA({
+    required String imagemBase64,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/ia/rotulo',
+        data: {'imagemBase64': imagemBase64},
+        options: Options(receiveTimeout: const Duration(seconds: 120)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
+  /// Lote 32.8 — Envia foto/imagem de bula. Resposta traz transcrição
+  /// estruturada (indicações, dose, efeitos, alertas). Sem chave IA:
+  /// { iaConfigurada: false }.
+  Future<Map<String, dynamic>> analisarBulaIA({
+    required String imagemBase64,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/ia/bula',
+        data: {'imagemBase64': imagemBase64},
+        options: Options(receiveTimeout: const Duration(seconds: 120)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   // ========== LGPD ==========
 
   Future<void> registrarConsentimento(
