@@ -100,21 +100,19 @@ export default function ScreenshotsGallery() {
           if (offset > total / 2) offset -= total;
           if (offset < -total / 2) offset += total;
 
-          // Só renderizamos os 5 slots visíveis para performance
-          if (Math.abs(offset) > 2) return null;
+          // Só renderizamos 3 slots (ativo + 1 de cada lado) — o palco
+          // fica mais limpo e não parece "cortado" nas pontas.
+          if (Math.abs(offset) > 1) return null;
 
           const isActive = offset === 0;
 
-          // Translação em pixels + rotação sutil + escala
-          const tx = offset * 200;
-          const scale = isActive ? 1 : Math.abs(offset) === 1 ? 0.78 : 0.6;
-          const rotateY = offset * -14;
+          // Translação em pixels + rotação + escala. Reduzida em relação
+          // à versão anterior pra as laterais caberem sem parecer cortadas.
+          const tx = offset * 165;
+          const scale = isActive ? 1 : 0.7;
+          const rotateY = offset * -16;
           const zIndex = 10 - Math.abs(offset);
-          const opacity = isActive
-            ? 1
-            : Math.abs(offset) === 1
-              ? 0.55
-              : 0.25;
+          const opacity = isActive ? 1 : 0.3;
 
           return (
             <button
@@ -133,13 +131,13 @@ export default function ScreenshotsGallery() {
                 transform: `translate(-50%, -50%) translateX(${tx}px) rotateY(${rotateY}deg) scale(${scale})`,
                 zIndex,
                 opacity,
-                filter: isActive ? 'none' : 'blur(1px)',
+                filter: isActive ? 'none' : 'blur(3px)',
                 cursor: isActive ? 'default' : 'pointer',
                 perspective: 1200,
               }}
             >
               <div
-                className={`relative w-[280px] sm:w-[320px] md:w-[360px] aspect-[9/19.5] rounded-[36px] overflow-hidden border transition-shadow ${
+                className={`relative w-[260px] sm:w-[300px] md:w-[340px] aspect-[9/19.5] rounded-[36px] overflow-hidden border transition-shadow ${
                   isActive
                     ? 'border-brand-primaryLight shadow-glow'
                     : 'border-white/[0.08] shadow-2xl shadow-black/60'
