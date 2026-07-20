@@ -17,6 +17,9 @@ export default function Nav() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-7 text-sm text-recorpo-dim">
+          <Link href="/#app" className="hover:text-recorpo-text transition-colors">
+            O app
+          </Link>
           <Link href="/#recursos" className="hover:text-recorpo-text transition-colors">
             Recursos
           </Link>
