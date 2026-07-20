@@ -55,15 +55,30 @@ jobs:
             echo "signed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "$RECORPO_KEYSTORE_BASE64" | base64 -d > flutter_app/android/app/recorpo-release.jks
-          # storeFile fica relativo ao módulo `app/` (é lá que o Gradle
-          # resolve via `file(...)` dentro do app/build.gradle.kts).
+          # base64 -d rejeita whitespace por padrão; tr -d limpa caso o
+          # secret tenha newline inserido pelo GitHub. -w0 no output evita
+          # wrap desnecessário.
+          echo "$RECORPO_KEYSTORE_BASE64" | tr -d ' \n\r' | base64 -d > flutter_app/android/app/recorpo-release.jks
+
+          # PKCS12 keystore exige key password == store password (spec).
+          # Ignoramos o RECORPO_KEY_PASSWORD e usamos storePassword nas duas
+          # linhas — resolve "Get Key failed: final block not properly padded".
+          # storeFile fica relativo ao módulo `app/` (Gradle resolve via
+          # file(...) dentro do app/build.gradle.kts).
           cat > flutter_app/android/key.properties <<EOF
           storeFile=recorpo-release.jks
           storePassword=$RECORPO_KEYSTORE_PASSWORD
           keyAlias=$RECORPO_KEY_ALIAS
-          keyPassword=$RECORPO_KEY_PASSWORD
+          keyPassword=$RECORPO_KEYSTORE_PASSWORD
           EOF
+
+          # Validação cedo: se a keystore ou senha estiverem erradas, o
+          # keytool já falha aqui com mensagem clara — evita perder 5min
+          # até o Gradle explodir com erro criptográfico obscuro.
+          keytool -list -v -keystore flutter_app/android/app/recorpo-release.jks \
+            -alias "$RECORPO_KEY_ALIAS" -storepass "$RECORPO_KEYSTORE_PASSWORD" \
+            2>&1 | grep -E "SHA1:|Alias name" | head -3
+
           echo "keystore written ($(wc -c < flutter_app/android/app/recorpo-release.jks) bytes)"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
