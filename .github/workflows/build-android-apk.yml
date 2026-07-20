@@ -56,8 +56,10 @@ jobs:
             exit 0
           fi
           echo "$RECORPO_KEYSTORE_BASE64" | base64 -d > flutter_app/android/app/recorpo-release.jks
+          # storeFile fica relativo ao módulo `app/` (é lá que o Gradle
+          # resolve via `file(...)` dentro do app/build.gradle.kts).
           cat > flutter_app/android/key.properties <<EOF
-          storeFile=app/recorpo-release.jks
+          storeFile=recorpo-release.jks
           storePassword=$RECORPO_KEYSTORE_PASSWORD
           keyAlias=$RECORPO_KEY_ALIAS
           keyPassword=$RECORPO_KEY_PASSWORD
