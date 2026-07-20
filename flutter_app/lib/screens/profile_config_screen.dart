@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/notification_service.dart';
+
 import '../models/patient_profile.dart';
 import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
@@ -521,6 +523,9 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
             // Lote 32.5 — Segurança do app (PIN + biometria).
             const _CardAppLock(),
             const SizedBox(height: 16),
+            // Lote 32.7 — Notificações contextuais.
+            const _CardNotificacoes(),
+            const SizedBox(height: 16),
             // Lote 32.6 — Meus dados (LGPD).
             const _CardMeusDados(),
             const SizedBox(height: 16),
@@ -745,6 +750,141 @@ class _CardAppLock extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lote 32.7 — Cartão pra controlar as notificações contextuais
+/// (hidratação inteligente e check-in mensal). Ambas opt-in por
+/// padrão; desligar cancela imediatamente pelo NotificationService.
+class _CardNotificacoes extends StatefulWidget {
+  const _CardNotificacoes();
+
+  @override
+  State<_CardNotificacoes> createState() => _CardNotificacoesState();
+}
+
+class _CardNotificacoesState extends State<_CardNotificacoes> {
+  bool _hidratacao = true;
+  bool _mensal = true;
+  bool _carregando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
+  Future<void> _carregar() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _hidratacao =
+          prefs.getBool(ProfilePrefsKeys.notifHidratacao) ?? true;
+      _mensal =
+          prefs.getBool(ProfilePrefsKeys.notifCheckInMensal) ?? true;
+      _carregando = false;
+    });
+  }
+
+  Future<void> _mudarHidratacao(bool v) async {
+    setState(() => _hidratacao = v);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(ProfilePrefsKeys.notifHidratacao, v);
+    if (!v) await NotificationService().cancelarHidratacaoMeioDia();
+  }
+
+  Future<void> _mudarMensal(bool v) async {
+    // Captura o service antes de qualquer await pra evitar uso de
+    // BuildContext em async gap.
+    final auth = context.read<AuthService>();
+    setState(() => _mensal = v);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(ProfilePrefsKeys.notifCheckInMensal, v);
+    if (v) {
+      await NotificationService().agendarCheckInMensal(
+        primeiroNome: (auth.nome ?? '').trim().split(' ').first,
+      );
+    } else {
+      await NotificationService().cancelarCheckInMensal();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: scheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: RecorpoGradients.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.notifications_none,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Notificações contextuais',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Só quando fizer sentido para você.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (_carregando)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _hidratacao,
+              onChanged: _mudarHidratacao,
+              title: const Text('Lembrete de hidratação'),
+              subtitle: const Text(
+                  '13h de hoje, apenas se você estiver abaixo da meta.'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _mensal,
+              onChanged: _mudarMensal,
+              title: const Text('Check-in mensal'),
+              subtitle: const Text(
+                  'Dia 1 às 10h, com resumo para levar ao médico.'),
+            ),
+          ],
         ],
       ),
     );

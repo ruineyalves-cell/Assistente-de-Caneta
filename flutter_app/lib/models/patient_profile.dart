@@ -123,6 +123,11 @@ class ProfilePrefsKeys {
   // pré-selecionar o chip no próximo uso (a maioria pesa sempre no
   // mesmo lugar). Guarda o `LocalPesagem.name`.
   static const String ultimoLocalPesagem = 'profile_ultimo_local_pesagem';
+
+  // Lote 32.7 — Notificações contextuais opt-in por padrão. Usuário
+  // pode desligar cada uma independente no card do perfil.
+  static const String notifHidratacao = 'profile_notif_hidratacao_v1';
+  static const String notifCheckInMensal = 'profile_notif_checkin_mensal_v1';
 }
 
 /// Onde o usuário costuma se pesar. Fica em prefs (não envolve
