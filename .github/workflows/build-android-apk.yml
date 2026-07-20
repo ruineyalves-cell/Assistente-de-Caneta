@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK + AAB
 
 on:
   push:
@@ -42,6 +42,29 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > flutter_app/android/app/google-services.json
           echo "google-services.json written ($(wc -c < flutter_app/android/app/google-services.json) bytes)"
 
+      - name: Decode release keystore (if secrets present)
+        id: keystore
+        env:
+          RECORPO_KEYSTORE_BASE64: ${{ secrets.RECORPO_KEYSTORE_BASE64 }}
+          RECORPO_KEYSTORE_PASSWORD: ${{ secrets.RECORPO_KEYSTORE_PASSWORD }}
+          RECORPO_KEY_ALIAS: ${{ secrets.RECORPO_KEY_ALIAS }}
+          RECORPO_KEY_PASSWORD: ${{ secrets.RECORPO_KEY_PASSWORD }}
+        run: |
+          if [ -z "$RECORPO_KEYSTORE_BASE64" ]; then
+            echo "::warning::Release keystore secrets ausentes — build sairá assinado com debug key (não publicável)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$RECORPO_KEYSTORE_BASE64" | base64 -d > flutter_app/android/app/recorpo-release.jks
+          cat > flutter_app/android/key.properties <<EOF
+          storeFile=app/recorpo-release.jks
+          storePassword=$RECORPO_KEYSTORE_PASSWORD
+          keyAlias=$RECORPO_KEY_ALIAS
+          keyPassword=$RECORPO_KEY_PASSWORD
+          EOF
+          echo "keystore written ($(wc -c < flutter_app/android/app/recorpo-release.jks) bytes)"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
       - name: Get dependencies
         working-directory: ./flutter_app
         run: flutter pub get
@@ -50,9 +73,21 @@ jobs:
         working-directory: ./flutter_app
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee /tmp/build.log || {
-            echo "==== BUILD FAILED — extracting cause ===="
-            ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build.log | head -50 | tr '\n' ' ' | cut -c1-900)
+          flutter build apk --release 2>&1 | tee /tmp/build-apk.log || {
+            echo "==== APK BUILD FAILED — extracting cause ===="
+            ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-apk.log | head -50 | tr '\n' ' ' | cut -c1-900)
+            echo "::error::${ERR}"
+            exit 1
+          }
+
+      - name: Build AAB (Release, for Play Store)
+        if: steps.keystore.outputs.signed == 'true'
+        working-directory: ./flutter_app
+        run: |
+          set -o pipefail
+          flutter build appbundle --release 2>&1 | tee /tmp/build-aab.log || {
+            echo "==== AAB BUILD FAILED — extracting cause ===="
+            ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-aab.log | head -50 | tr '\n' ' ' | cut -c1-900)
             echo "::error::${ERR}"
             exit 1
           }
@@ -64,12 +99,23 @@ jobs:
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
-      - name: Publish APK to Release (direct download link)
+      - name: Upload AAB artifact
+        if: steps.keystore.outputs.signed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: flutter_app/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Publish to Release (direct download links)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
-          name: Assistente de Caneta — APK (beta)
+          name: Recorpo — Android (beta)
           body: |
-            APK de teste do Assistente de Caneta.
-            Baixe o arquivo `app-release.apk` abaixo direto no celular Android e instale.
-          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+            **APK** (`app-release.apk`) — instalação lateral no Android; baixe direto no celular.
+
+            **AAB** (`app-release.aab`) — arquivo assinado que sobe no Play Console (Track de testes internos, fechado, aberto ou produção).
+          files: |
+            flutter_app/build/app/outputs/flutter-apk/app-release.apk
+            flutter_app/build/app/outputs/bundle/release/app-release.aab

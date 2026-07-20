@@ -1,4 +1,4 @@
-package com.example.assistente_caneta
+package br.com.recorpo.app
 
 import io.flutter.embedding.android.FlutterActivity
 

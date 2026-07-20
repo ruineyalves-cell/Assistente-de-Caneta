@@ -1,14 +1,27 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
+    // O plugin Google Services precisa ficar aqui pra o google-services.json
+    // ser processado no build. Sem ele o Firebase Auth (Lote 20) não conecta.
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// key.properties (criado pelo CI a partir dos secrets — nunca commitado).
+// Ausente localmente: build usa a keystore de debug automaticamente.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+val hasReleaseKeystore = keystorePropertiesFile.exists() &&
+    keystoreProperties.getProperty("storeFile") != null
+
 android {
-    namespace = "com.example.assistente_caneta"
-    // compileSdk 36 é exigido por dependências recentes (home_widget 0.9,
-    // flutter_local_notifications 18+, permission_handler 11+). Flutter
-    // 3.44 fornece 35 por padrão; sobrescrevemos aqui.
+    namespace = "br.com.recorpo.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -18,10 +31,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.assistente_caneta"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "br.com.recorpo.app"
         // Health Connect (Lote 11) exige API >= 26; libs de câmera/OCR
         // usadas nos Lotes 9-10 também rodam melhor a partir daí.
         minSdk = 26
@@ -30,11 +40,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             // R8 é ativado (necessário para as regras de `-dontwarn` do
             // proguard-rules.pro ancorarem — sem elas o mlkit trava o
             // build). shrinkResources fica desligado: se você ativar,
