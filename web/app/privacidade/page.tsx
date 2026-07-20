@@ -34,10 +34,10 @@ export default function PrivacidadePage() {
           Para solicitar acesso, correção, exportação ou exclusão dos seus
           dados, escreva para o Encarregado (DPO) em{' '}
           <a
-            href="mailto:dpo@recorpo.com.br"
+            href="mailto:recorpoapp@gmail.com"
             className="text-brand-primaryLight underline underline-offset-2"
           >
-            dpo@recorpo.com.br
+            recorpoapp@gmail.com
           </a>{' '}
           — respondemos em até 15 dias corridos.
         </p>

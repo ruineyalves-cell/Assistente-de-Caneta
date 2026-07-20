@@ -94,8 +94,7 @@ export const secoesPrivacidade: Array<{
     titulo: 'Quem é o controlador dos seus dados',
     paragrafos: [
       'O controlador dos dados pessoais tratados pelo Recorpo é o desenvolvedor responsável pelo aplicativo, identificado nos metadados da Play Store.',
-      'Encarregado pelo Tratamento de Dados (DPO): dpo@recorpo.com.br',
-      'Canal geral de atendimento: contato@recorpo.com.br',
+      'Encarregado pelo Tratamento de Dados (DPO) e canal geral de atendimento: recorpoapp@gmail.com',
     ],
   },
   {
@@ -150,7 +149,7 @@ export const secoesPrivacidade: Array<{
     numero: '7',
     titulo: 'Seus direitos (LGPD art. 18)',
     paragrafos: [
-      'A qualquer momento você pode, direto pelo aplicativo (menu Perfil → Meus dados) ou pelo e-mail dpo@recorpo.com.br:',
+      'A qualquer momento você pode, direto pelo aplicativo (menu Perfil → Meus dados) ou pelo e-mail recorpoapp@gmail.com:',
       'I — confirmar a existência de tratamento;',
       'II — acessar seus dados;',
       'III — corrigir dados incompletos, inexatos ou desatualizados;',

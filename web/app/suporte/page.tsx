@@ -26,7 +26,7 @@ const FAQ: Array<{ pergunta: string; resposta: string }> = [
   {
     pergunta: 'Meus dados ficam onde?',
     resposta:
-      'Em servidores criptografados, com dados sensíveis cifrados em repouso e trânsito. Você pode exportar ou excluir tudo pelo próprio app, ou solicitar por e-mail em contato@recorpo.com.br.',
+      'Em servidores criptografados, com dados sensíveis cifrados em repouso e trânsito. Você pode exportar ou excluir tudo pelo próprio app, ou solicitar por e-mail em recorpoapp@gmail.com.',
   },
   {
     pergunta: 'Meu médico pode ver meus registros?',
@@ -79,10 +79,10 @@ export default function SuportePage() {
         <p className="text-recorpo-dim">
           Escreve pra gente em{' '}
           <a
-            href="mailto:contato@recorpo.com.br"
+            href="mailto:recorpoapp@gmail.com"
             className="text-brand-primaryLight underline underline-offset-2 font-medium"
           >
-            contato@recorpo.com.br
+            recorpoapp@gmail.com
           </a>{' '}
           — respondemos em até 2 dias úteis. Se for questão médica urgente,
           procure seu médico ou o SAMU (192).

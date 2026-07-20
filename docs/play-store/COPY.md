@@ -143,7 +143,7 @@ Este aplicativo é uma ferramenta educacional de registro. NÃO fornece
 diagnóstico, NÃO substitui a orientação médica e NÃO é dispositivo
 médico. Decisões sobre medicação e dose são sempre com seu médico.
 
-📧 Suporte: contato@recorpo.com.br
+📧 Suporte: recorpoapp@gmail.com
 🌐 Site: recorpo.com.br
 ```
 
