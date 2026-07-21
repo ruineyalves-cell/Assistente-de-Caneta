@@ -53,14 +53,26 @@ class ApiService {
             }
           }
 
-          // 502/503/504 → o Render free tier hibernou e está acordando.
-          // Damos até 2 tentativas com backoff antes de repassar o erro.
+          // Render free tier hiberna após ~15min de inatividade. O primeiro
+          // request pode retornar 502/503/504 OU dar timeout enquanto o
+          // container acorda (até ~60s). Cobrimos ambos os cenários com
+          // 4 tentativas + backoff (3+7+15+30 = 55s de tolerância).
           final status = error.response?.statusCode;
-          if ((status == 502 || status == 503 || status == 504)) {
+          final tipo = error.type;
+          final ehColdStart = status == 502 ||
+              status == 503 ||
+              status == 504 ||
+              tipo == DioExceptionType.connectionTimeout ||
+              tipo == DioExceptionType.receiveTimeout ||
+              tipo == DioExceptionType.sendTimeout ||
+              tipo == DioExceptionType.connectionError;
+
+          if (ehColdStart) {
             final opts = error.requestOptions;
             final tentativa = (opts.extra['retry_5xx'] as int?) ?? 0;
-            if (tentativa < 2) {
-              await Future.delayed(Duration(seconds: 3 + tentativa * 4));
+            final backoffs = [3, 7, 15, 30];
+            if (tentativa < backoffs.length) {
+              await Future.delayed(Duration(seconds: backoffs[tentativa]));
               opts.extra['retry_5xx'] = tentativa + 1;
               try {
                 final response = await _dio.fetch(opts);
@@ -75,6 +87,24 @@ class ApiService {
         },
       ),
     );
+  }
+
+  /// Faz um GET silencioso em /health pra tirar o backend Render do
+  /// estado hibernado antes do usuário disparar a primeira request.
+  /// Não bloqueia, não propaga erro — o objetivo é apenas cutucar o
+  /// container pra estar quente quando o login for enviado.
+  Future<void> warmUp() async {
+    try {
+      await _dio.get(
+        '/health',
+        options: Options(
+          receiveTimeout: const Duration(seconds: 65),
+          sendTimeout: const Duration(seconds: 10),
+        ),
+      );
+    } catch (_) {
+      // Silencioso — se falhou, o retry do login vai cobrir.
+    }
   }
 
   void setTokens(String accessToken, String refreshToken) {

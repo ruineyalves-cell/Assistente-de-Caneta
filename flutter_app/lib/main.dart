@@ -57,6 +57,12 @@ void main() async {
   final authService = AuthService();
   await authService.initialize();
 
+  // Cutuca o backend Render pra ele acordar em paralelo, enquanto o user
+  // ainda está lendo o disclaimer/preenchendo login. Sem await — não
+  // bloqueia o boot. Quando ele clicar em "Entrar", geralmente o backend
+  // já está quente e a request não sofre cold start.
+  unawaited(authService.api.warmUp());
+
   // Lote 20/23 — Premium service (Play Billing + gate Free/Pro).
   // Inicializa após o auth para não bloquear o boot se a Play Store
   // não estiver disponível (dev/CI/web).
