@@ -1,0 +1,29 @@
+name: Keep Backend Awake
+
+# Render Free hiberna após ~15 min sem tráfego. Este cron pinga /health
+# a cada 10 min pra manter o backend sempre respondendo — resolve o
+# 'servidor está acordando ~1 min' que o app mostra no primeiro uso do
+# dia. Zero custo (workflows Actions são grátis pra repos públicos).
+#
+# Quando migrarmos pro Render Starter pago (US$7/mês, sem hibernação),
+# esse workflow pode ser desativado.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # a cada 10 min
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          echo "→ pinging backend at $(date -u)"
+          RESP=$(curl -sS --max-time 90 -w '\nHTTP=%{http_code} time=%{time_total}s' \
+            https://assistente-caneta-backend-tkl7.onrender.com/health)
+          echo "$RESP"
+          echo "$RESP" | grep -q '"ok":true' || {
+            echo "::warning::backend não respondeu ok=true"
+            exit 0
+          }
