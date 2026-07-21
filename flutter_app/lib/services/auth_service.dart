@@ -5,6 +5,11 @@ import 'social_auth_service.dart';
 
 class AuthService extends ChangeNotifier {
   final ApiService _apiService = ApiService();
+
+  /// Acesso público ao ApiService — usado pelo main.dart para o warm-up
+  /// do backend no boot (ping /health silencioso enquanto o user lê a
+  /// tela de disclaimer).
+  ApiService get api => _apiService;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   String? _userId;
