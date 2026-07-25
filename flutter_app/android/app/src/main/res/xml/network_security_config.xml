@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Recorpo — Network Security Config (S4).
+
+  Bloqueia HTTP em cleartext no app inteiro (usesCleartextTraffic=false)
+  e não confia em CAs adicionadas pelo usuário (evita MITM via CA
+  fajuta instalada em Configurações → Segurança → Credenciais).
+
+  Isto vale desde Android 7 (API 24). Nosso minSdk é 26 → 100% coberto.
+-->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <!-- Apenas CAs do sistema operacional. -->
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+</network-security-config>

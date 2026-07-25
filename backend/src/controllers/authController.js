@@ -78,12 +78,72 @@ async function registrar(req, res, next) {
   } catch (err) { next(err); }
 }
 
+/**
+ * SEGURANÇA — Lockout por email (S3).
+ *
+ * Rate limit por IP não protege contra credential stuffing distribuído
+ * (mesmo email, botnet de IPs). Contamos falhas por email em memória
+ * e bloqueamos progressivamente. Após lockout, mesmo senha correta
+ * é rejeitada até janela expirar — impede oráculo.
+ *
+ * Em memória = OK para 1 instância. Ao escalar para N instâncias, migrar
+ * o Map para Redis (Upstash free tier basta). Contadores expiram sozinhos
+ * via TTL para não vazar memória.
+ */
+const _falhasLogin = new Map(); // emailNorm → { count, lockUntil }
+const LOCK_APOS = 5;
+const LOCK_MINUTOS = 15;
+
+function _statusLock(emailNorm) {
+  const r = _falhasLogin.get(emailNorm);
+  if (!r) return { locked: false, count: 0 };
+  if (r.lockUntil && r.lockUntil > Date.now()) {
+    return { locked: true, count: r.count, restaSeg: Math.ceil((r.lockUntil - Date.now()) / 1000) };
+  }
+  return { locked: false, count: r.count };
+}
+
+function _registrarFalha(emailNorm) {
+  const r = _falhasLogin.get(emailNorm) || { count: 0, lockUntil: 0 };
+  r.count += 1;
+  if (r.count >= LOCK_APOS) {
+    r.lockUntil = Date.now() + LOCK_MINUTOS * 60 * 1000;
+  }
+  _falhasLogin.set(emailNorm, r);
+}
+
+function _resetarFalhas(emailNorm) {
+  _falhasLogin.delete(emailNorm);
+}
+
+// GC: purga entradas com lockUntil expirado (≤ 1h atrás) a cada 10min.
+setInterval(() => {
+  const corte = Date.now() - 3600 * 1000;
+  for (const [k, v] of _falhasLogin.entries()) {
+    if ((v.lockUntil || 0) < corte) _falhasLogin.delete(k);
+  }
+}, 10 * 60 * 1000).unref?.();
+
 async function login(req, res, next) {
   try {
     const { email, senha } = z.object({ email: z.string().email(), senha: z.string() }).parse(req.body);
+    const emailNorm = email.toLowerCase();
+
+    const lock = _statusLock(emailNorm);
+    if (lock.locked) {
+      return res.status(429).json({
+        erro: `Muitas tentativas falhas. Tente novamente em ${Math.ceil(lock.restaSeg / 60)} min.`,
+      });
+    }
+
     const user = await userModel.porEmail(email);
     const ok = user && (await bcrypt.compare(senha, user.password_hash));
-    if (!ok) return res.status(401).json({ erro: 'E-mail ou senha inválidos' });
+    if (!ok) {
+      _registrarFalha(emailNorm);
+      return res.status(401).json({ erro: 'E-mail ou senha inválidos' });
+    }
+    _resetarFalhas(emailNorm);
+
     const refresh = await emitirRefresh(user.id);
     return res.json({
       usuario: { id: user.id, nome: user.nome, email: user.email, role: user.role },
@@ -93,17 +153,71 @@ async function login(req, res, next) {
   } catch (err) { next(err); }
 }
 
+/**
+ * SEGURANÇA — Refresh token rotation com detecção de reuso (S3).
+ *
+ * Antes: mesmo refresh token valia 30 dias, cada /refresh só gerava
+ * novo access. Se um refresh vazasse (backup do usuário, bug do app,
+ * phishing), atacante mantinha acesso silencioso por 30 dias.
+ *
+ * Agora (padrão OAuth 2.0 rotating refresh + reuse detection):
+ *   1. /refresh sempre emite refresh NOVO.
+ *   2. O refresh antigo é revogado com `replaced_by_id` apontando pro novo.
+ *   3. Se um refresh JÁ REVOGADO for reusado → sinal de vazamento.
+ *      Revogamos TODA a cadeia (usuário desloga em todos os dispositivos)
+ *      e devolvemos 401. Cliente legítimo simplesmente fará novo login.
+ *
+ * Requer coluna `replaced_by_id UUID NULL` em `refresh_tokens`. Adicionada
+ * pela migration 002_refresh_rotation.sql (idempotente).
+ */
 async function refresh(req, res, next) {
   try {
     const { refreshToken } = z.object({ refreshToken: z.string() }).parse(req.body);
+    const hash = sha256(refreshToken);
+
     const { rows } = await db.query(
-      `SELECT rt.user_id, u.role FROM refresh_tokens rt
-        JOIN users u ON u.id = rt.user_id AND u.deleted_at IS NULL
-       WHERE rt.token_hash = $1 AND rt.revoked_at IS NULL AND rt.expires_at > now()`,
-      [sha256(refreshToken)]
+      `SELECT rt.id, rt.user_id, rt.revoked_at, rt.expires_at, u.role
+         FROM refresh_tokens rt
+         JOIN users u ON u.id = rt.user_id AND u.deleted_at IS NULL
+        WHERE rt.token_hash = $1`,
+      [hash]
     );
-    if (!rows.length) return res.status(401).json({ erro: 'Refresh token inválido ou expirado' });
-    return res.json({ accessToken: signAccessToken({ id: rows[0].user_id, role: rows[0].role }) });
+    const linha = rows[0];
+
+    if (!linha) return res.status(401).json({ erro: 'Refresh token inválido' });
+
+    // Detecção de reuso: token já foi rotacionado (revoked_at + replaced_by_id).
+    // Vazamento presumido → revoga a família inteira do usuário.
+    if (linha.revoked_at) {
+      await db.query(
+        `UPDATE refresh_tokens SET revoked_at = COALESCE(revoked_at, now())
+          WHERE user_id = $1 AND revoked_at IS NULL`,
+        [linha.user_id]
+      );
+      return res.status(401).json({
+        erro: 'Refresh token reusado — sessão encerrada em todos os dispositivos por segurança. Faça login novamente.',
+      });
+    }
+
+    if (new Date(linha.expires_at) <= new Date()) {
+      return res.status(401).json({ erro: 'Refresh token expirado' });
+    }
+
+    // Rotação atômica: emite novo, aponta o antigo pro novo e revoga.
+    const novoRefresh = await emitirRefresh(linha.user_id);
+    const { rows: novoRows } = await db.query(
+      `SELECT id FROM refresh_tokens WHERE token_hash = $1`,
+      [sha256(novoRefresh)]
+    );
+    await db.query(
+      `UPDATE refresh_tokens SET revoked_at = now(), replaced_by_id = $2 WHERE id = $1`,
+      [linha.id, novoRows[0].id]
+    );
+
+    return res.json({
+      accessToken: signAccessToken({ id: linha.user_id, role: linha.role }),
+      refreshToken: novoRefresh,
+    });
   } catch (err) { next(err); }
 }
 

@@ -7,8 +7,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # SEGURANÇA: origens explícitas. Apps mobile (Flutter) não enviam
+      # header Origin e continuam funcionando. Web (Vercel + custom
+      # domain) precisa estar listada aqui.
       - key: CORS_ORIGIN
-        value: "*"
+        value: "https://www.recorpo.com.br,https://recorpo.com.br,https://recorpo-web.vercel.app"
       - key: JWT_SECRET
         generateValue: true
       - key: DATA_ENCRYPTION_KEY

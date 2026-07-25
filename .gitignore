@@ -4,7 +4,20 @@
 !.env.example
 *.pem
 *.key
+*.jks
+*.p12
+*.keystore
+key.properties
 secrets/
+keys.txt
+backend/keys.txt
+google-services.json
+!**/google-services.json.example
+
+# Backups PG
+*.dump
+*.sql.gz
+backups/
 
 # Node
 node_modules/

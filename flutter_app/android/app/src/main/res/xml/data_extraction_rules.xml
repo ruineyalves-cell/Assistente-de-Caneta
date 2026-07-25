@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Recorpo — Data Extraction Rules (Android 12+, S4).
+
+  Bloqueia tanto Auto Backup (Google Drive) quanto Device Transfer
+  (troca de aparelho) de copiar QUALQUER arquivo do app. Isto protege
+  o EncryptedSharedPreferences (onde vivem access/refresh tokens) e
+  o database criptografado local, caso exista.
+-->
+<data-extraction-rules>
+  <cloud-backup>
+    <exclude domain="root" />
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+    <exclude domain="file" />
+    <exclude domain="external" />
+  </cloud-backup>
+  <device-transfer>
+    <exclude domain="root" />
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+    <exclude domain="file" />
+    <exclude domain="external" />
+  </device-transfer>
+</data-extraction-rules>
