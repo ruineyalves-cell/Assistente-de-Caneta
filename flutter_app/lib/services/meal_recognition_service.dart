@@ -1,7 +1,7 @@
-import 'dart:convert' show base64Encode;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+import '../utils/image_prep.dart';
 import 'api_service.dart';
 
 /// Lote 21 — Reconhecimento de comida na foto.
@@ -56,9 +56,8 @@ class MealRecognitionService {
   /// pra IA — nesse caso a UI segue só com o local.
   Future<MealAiResult?> analisarNoBackend(File imagem) async {
     try {
-      final bytes = await imagem.readAsBytes();
       final resp = await _api.analisarRefeicaoIA(
-        imagemBase64: base64Encode(bytes),
+        imagemBase64: await ImagePrep.prepararParaIA(imagem),
       );
       if (resp['iaConfigurada'] == false) return null;
       return MealAiResult(

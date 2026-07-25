@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
+import '../utils/image_prep.dart';
 import '../utils/theme.dart';
 
 /// Lote 32.8 — Resultado do scanner de bula.
@@ -35,9 +35,8 @@ class _BulaResultScreenState extends State<BulaResultScreen> {
   Future<void> _analisar() async {
     final auth = context.read<AuthService>();
     try {
-      final bytes = await File(widget.foto.path).readAsBytes();
       final resp = await auth.apiService.analisarBulaIA(
-        imagemBase64: base64Encode(bytes),
+        imagemBase64: await ImagePrep.prepararParaIA(File(widget.foto.path)),
       );
       if (!mounted) return;
       setState(() {

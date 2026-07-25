@@ -30,6 +30,19 @@ class AuthService extends ChangeNotifier {
 
   // Inicializa tokens salvos
   Future<void> initialize() async {
+    // Sempre que a API rotaciona o refresh, persistimos os dois novos
+    // valores no cofre. Sem isso, o próximo cold-start relogaria com
+    // um refresh já revogado pelo backend (detecção de reuso mataria
+    // a sessão em todos os dispositivos).
+    _apiService.setOnTokensRefreshed((access, refresh) async {
+      _accessToken = access;
+      _refreshToken = refresh;
+      try {
+        await _storage.write(key: 'access_token', value: access);
+        await _storage.write(key: 'refresh_token', value: refresh);
+      } catch (_) {}
+    });
+
     try {
       _accessToken = await _storage.read(key: 'access_token');
       _refreshToken = await _storage.read(key: 'refresh_token');

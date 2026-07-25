@@ -61,7 +61,20 @@ void main() async {
   // ainda está lendo o disclaimer/preenchendo login. Sem await — não
   // bloqueia o boot. Quando ele clicar em "Entrar", geralmente o backend
   // já está quente e a request não sofre cold start.
-  unawaited(authService.api.warmUp());
+  //
+  // Se o usuário já está logado, aproveitamos o warm-up pra também
+  // renovar o access token em paralelo — o dashboard abre sem esperar
+  // request extra e sem risco de 401 no primeiro GET.
+  unawaited(() async {
+    await authService.api.warmUp();
+    if (authService.isAuthenticated) {
+      try {
+        await authService.api.refreshTokens();
+      } catch (_) {
+        // Falha silenciosa: interceptor Dio cobre no primeiro 401.
+      }
+    }
+  }());
 
   // Lote 20/23 — Premium service (Play Billing + gate Free/Pro).
   // Inicializa após o auth para não bloquear o boot se a Play Store

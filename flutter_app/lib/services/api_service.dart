@@ -196,12 +196,27 @@ class ApiService {
         data: {'refreshToken': _refreshToken},
       );
       final data = response.data as Map<String, dynamic>;
-      // O refresh retorna apenas um novo accessToken; mantém o refreshToken atual.
-      setTokens(data['accessToken'] as String, _refreshToken!);
+      // Backend rotaciona: usa o novo refreshToken se vier; fallback pro
+      // atual (compat com backend antigo enquanto migração roda).
+      final novoRefresh = (data['refreshToken'] as String?) ?? _refreshToken!;
+      setTokens(data['accessToken'] as String, novoRefresh);
+      // Callback opcional pra persistência no AuthService.
+      _onTokensRefreshed?.call(data['accessToken'] as String, novoRefresh);
       return data;
     } on DioException catch (e) {
       throw _parseError(e);
     }
+  }
+
+  /// Callback disparado sempre que refreshTokens() gera credenciais novas.
+  /// AuthService injeta pra persistir no flutter_secure_storage. Sem isso,
+  /// a rotação valeria só em memória e o próximo cold-start relogaria com
+  /// refresh já revogado → forçaria login.
+  void Function(String accessToken, String refreshToken)? _onTokensRefreshed;
+  void setOnTokensRefreshed(
+    void Function(String accessToken, String refreshToken) cb,
+  ) {
+    _onTokensRefreshed = cb;
   }
 
   Future<void> logout() async {

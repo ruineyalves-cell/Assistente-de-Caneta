@@ -39,6 +39,10 @@ dependencies:
   # Câmera & imagem (foto da refeição, scanner ao vivo)
   image_picker: ^1.1.2
   camera: ^0.11.0+2
+  # Compressão + resize antes de enviar pra IA (Lote P1).
+  # Reduz base64 em ~70% (2 MB → 600 KB) → upload 4G 3× mais rápido
+  # e mata bug de 413 no /api/ia/* mesmo com fotos grandes.
+  flutter_image_compress: ^2.3.0
 
   # OCR (prescrição nutricional). 0.14+ compatível com image_labeling 0.13
   google_mlkit_text_recognition: ^0.14.0
