@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const app = require('./app');
 const db = require('./config/db');
+const { logger, capturarErro } = require('./utils/logger');
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -22,9 +23,9 @@ async function aplicarMigrationsPendentes() {
   for (const f of arquivos) {
     try {
       await db.query(fs.readFileSync(path.join(dir, f), 'utf8'));
-      console.log(`[migrations] ${f} aplicada`);
+      logger.info({ evento: 'migration_ok', arquivo: f }, `migration ${f} aplicada`);
     } catch (err) {
-      console.error(`[migrations] falha em ${f}:`, err.message);
+      logger.error({ evento: 'migration_falha', arquivo: f, err }, `migration ${f} falhou`);
       throw err;
     }
   }
@@ -41,21 +42,26 @@ async function main() {
       const { rowCount } = await db.query(
         `DELETE FROM users WHERE deleted_at IS NOT NULL AND purge_after < now()`
       );
-      if (rowCount) console.log(`[lgpd] purga definitiva: ${rowCount} conta(s) eliminada(s)`);
+      if (rowCount) {
+        logger.info({ evento: 'lgpd_purga', contas: rowCount }, 'purga LGPD executada');
+      }
     } catch (err) {
-      console.error('[lgpd] falha na purga:', err.message);
+      capturarErro(err, { onde: 'lgpd_purga' });
     }
   }
   await purgarContasExpiradas();
   setInterval(purgarContasExpiradas, 12 * 3600 * 1000);
 
   app.listen(PORT, () => {
-    console.log(`🚀 Assistente de Caneta API rodando em http://localhost:${PORT}`);
-    console.log(`   Health check: http://localhost:${PORT}/health`);
+    logger.info({ porta: PORT }, 'Recorpo API rodando');
   });
 }
 
+// Errors não capturados no event loop → Sentry + log estruturado.
+process.on('uncaughtException', (err) => capturarErro(err, { onde: 'uncaughtException' }));
+process.on('unhandledRejection', (err) => capturarErro(err, { onde: 'unhandledRejection' }));
+
 main().catch((err) => {
-  console.error('Falha ao iniciar:', err);
+  capturarErro(err, { onde: 'main' });
   process.exit(1);
 });

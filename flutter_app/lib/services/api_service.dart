@@ -31,11 +31,18 @@ class ApiService {
           return handler.next(options);
         },
         onError: (error, handler) async {
-          // Se 401, tenta refresh
+          // Se 401 na rota de refresh → refresh é o próprio problema, não
+          // dá pra retry. Sessão perdida.
+          final ehRefresh = error.requestOptions.path.endsWith('/auth/refresh');
+          if (error.response?.statusCode == 401 && ehRefresh) {
+            _onSessionExpired?.call();
+            return handler.reject(error);
+          }
+
+          // Se 401 numa rota normal, tenta refresh 1× e retry
           if (error.response?.statusCode == 401 && _refreshToken != null) {
             try {
-              final newTokens = await refreshTokens();
-              // Retry original request com novo token
+              await refreshTokens();
               final opts = error.requestOptions;
               opts.headers['Authorization'] = 'Bearer $_accessToken';
               final response = await _dio.request(
@@ -48,7 +55,11 @@ class ApiService {
                 ),
               );
               return handler.resolve(response);
-            } catch (e) {
+            } catch (_) {
+              // Refresh falhou (rotação de JWT_SECRET no backend, refresh
+              // revogado por reuse-detection, ou banco derrubado). Notifica
+              // sessão perdida e devolve erro pra tela.
+              _onSessionExpired?.call();
               return handler.reject(error);
             }
           }
@@ -217,6 +228,15 @@ class ApiService {
     void Function(String accessToken, String refreshToken) cb,
   ) {
     _onTokensRefreshed = cb;
+  }
+
+  /// Callback disparado quando a sessão é perdida de vez (refresh falhou,
+  /// JWT_SECRET foi rotacionado no backend, refresh reusado etc). O
+  /// AuthService reage limpando tokens + marcando `sessaoExpirou = true`
+  /// pra tela de login mostrar o SnackBar amigável em vez de erro cru.
+  void Function()? _onSessionExpired;
+  void setOnSessionExpired(void Function() cb) {
+    _onSessionExpired = cb;
   }
 
   Future<void> logout() async {

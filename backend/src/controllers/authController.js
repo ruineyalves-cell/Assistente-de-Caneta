@@ -6,6 +6,7 @@ const db = require('../config/db');
 const userModel = require('../models/userModel');
 const { signAccessToken } = require('../middleware/auth');
 const { sha256 } = require('../utils/crypto');
+const { logger, logSeguranca } = require('../utils/logger');
 
 // Lote 20 — Cliente OAuth do Google reaproveitado entre requisições.
 // GOOGLE_OAUTH_CLIENT_IDS aceita CSV — para permitir simultaneamente o
@@ -86,9 +87,31 @@ async function registrar(req, res, next) {
  * e bloqueamos progressivamente. Após lockout, mesmo senha correta
  * é rejeitada até janela expirar — impede oráculo.
  *
- * Em memória = OK para 1 instância. Ao escalar para N instâncias, migrar
- * o Map para Redis (Upstash free tier basta). Contadores expiram sozinhos
- * via TTL para não vazar memória.
+ * ── LIMITAÇÃO CONHECIDA ────────────────────────────────────────────
+ * O Map vive na memória do processo. Isso significa:
+ *   - Render Free (hiberna): contador zera a cada acordar → atacante
+ *     que persistir por horas driblaria. Aceitável no MVP.
+ *   - Render Basic (sem hibernação): contador persiste até deploy/crash
+ *     — em geral semanas. Bom o suficiente contra credential stuffing.
+ *   - Múltiplas instâncias (Standard+): cada instância tem seu próprio
+ *     Map — atacante que sortear qual instância recebe pode driblar
+ *     dividindo tentativas.
+ *
+ * ── QUANDO MIGRAR PRA REDIS ────────────────────────────────────────
+ *   TRIGGER 1: ≥500 DAU OU
+ *   TRIGGER 2: >1 instância do backend rodando
+ *
+ * Opções recomendadas quando chegar a hora:
+ *   - Upstash Redis Free (10k comandos/dia grátis, sem cartão)
+ *   - Render Key-Value (~$10/mês, integração 1-clique)
+ *
+ * Substituir Map por rate-limiter-flexible (npm) apontando pro Redis:
+ *   const RateLimiterRedis = require('rate-limiter-flexible').RateLimiterRedis;
+ *   const limiter = new RateLimiterRedis({
+ *     storeClient: redisClient, keyPrefix: 'login_falhas',
+ *     points: 5, duration: 900, blockDuration: 900,
+ *   });
+ * ──────────────────────────────────────────────────────────────────
  */
 const _falhasLogin = new Map(); // emailNorm → { count, lockUntil }
 const LOCK_APOS = 5;
@@ -140,9 +163,16 @@ async function login(req, res, next) {
     const ok = user && (await bcrypt.compare(senha, user.password_hash));
     if (!ok) {
       _registrarFalha(emailNorm);
+      const st = _statusLock(emailNorm);
+      if (st.locked) {
+        logSeguranca('login_lockout', { emailNorm, tentativas: st.count });
+      } else {
+        logSeguranca('login_falha', { emailNorm, tentativas: st.count });
+      }
       return res.status(401).json({ erro: 'E-mail ou senha inválidos' });
     }
     _resetarFalhas(emailNorm);
+    logger.info({ evento: 'login_ok', userId: user.id }, 'login por senha');
 
     const refresh = await emitirRefresh(user.id);
     return res.json({
@@ -189,11 +219,15 @@ async function refresh(req, res, next) {
     // Detecção de reuso: token já foi rotacionado (revoked_at + replaced_by_id).
     // Vazamento presumido → revoga a família inteira do usuário.
     if (linha.revoked_at) {
-      await db.query(
+      const { rowCount } = await db.query(
         `UPDATE refresh_tokens SET revoked_at = COALESCE(revoked_at, now())
           WHERE user_id = $1 AND revoked_at IS NULL`,
         [linha.user_id]
       );
+      logSeguranca('refresh_reuse_detectado', {
+        userId: linha.user_id,
+        familiaRevogada: rowCount,
+      });
       return res.status(401).json({
         erro: 'Refresh token reusado — sessão encerrada em todos os dispositivos por segurança. Faça login novamente.',
       });

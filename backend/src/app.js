@@ -5,6 +5,7 @@ const compression = require('compression');
 const routes = require('./routes');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { logger, logSeguranca } = require('./utils/logger');
 
 const app = express();
 
@@ -43,9 +44,9 @@ const corsOrigemLista = corsOrigemEnv
 let corsOrigin;
 if (!corsOrigemEnv || corsOrigemEnv === '*') {
   if (process.env.NODE_ENV === 'production') {
-    console.warn(
-      '[cors] AVISO: CORS_ORIGIN aberto em produção. Defina domínios explícitos ' +
-        '(ex.: https://www.recorpo.com.br,https://recorpo.com.br).'
+    logger.warn(
+      { evento: 'cors_aberto' },
+      'CORS_ORIGIN aberto em produção. Defina domínios explícitos.'
     );
   }
   corsOrigin = true; // reflete Origin (dev / retro-compat)
@@ -53,6 +54,7 @@ if (!corsOrigemEnv || corsOrigemEnv === '*') {
   corsOrigin = (origin, cb) => {
     if (!origin) return cb(null, true); // apps mobile e curl passam sem Origin
     if (corsOrigemLista.includes(origin)) return cb(null, true);
+    logSeguranca('cors_bloqueado', { origin });
     return cb(new Error(`CORS bloqueado para origem ${origin}`));
   };
 }

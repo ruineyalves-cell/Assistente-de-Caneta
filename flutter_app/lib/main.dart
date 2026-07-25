@@ -304,6 +304,27 @@ class _LoginPageState extends State<LoginPage> {
   String? errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Se caímos aqui porque o backend invalidou a sessão (rotação de
+    // JWT_SECRET, refresh reusado, revogado), o AuthService marca a flag.
+    // Mostramos SnackBar amigável em vez de deixar o usuário sem contexto.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthService>();
+      if (auth.sessaoExpirou && mounted) {
+        auth.consumirSessaoExpirou();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sua sessão expirou. Entre novamente pra continuar.'),
+            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();

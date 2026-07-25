@@ -20,6 +20,18 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  /// True quando a sessão foi encerrada pelo servidor (rotação de segredo,
+  /// refresh reusado, revogado). Setado pelo hook do ApiService e
+  /// consumido pela LoginScreen pra mostrar SnackBar amigável em vez de
+  /// erro cru. LoginScreen deve chamar [consumirSessaoExpirou] após
+  /// apresentar a mensagem.
+  bool _sessaoExpirou = false;
+  bool get sessaoExpirou => _sessaoExpirou;
+
+  void consumirSessaoExpirou() {
+    _sessaoExpirou = false;
+  }
+
   // Getters
   bool get isAuthenticated => _accessToken != null;
   bool get isLoading => _isLoading;
@@ -27,6 +39,21 @@ class AuthService extends ChangeNotifier {
   String? get userId => _userId;
   String? get email => _email;
   String? get nome => _nome;
+
+  /// Logout silencioso — chamado quando o servidor invalida a sessão
+  /// (rotação de JWT_SECRET, refresh reuse detectado, etc.). Não faz POST
+  /// /auth/logout (backend já invalidou). Limpa cofre + marca flag.
+  Future<void> _forcarLogoutPorExpiracao() async {
+    _accessToken = null;
+    _refreshToken = null;
+    _apiService.clearTokens();
+    try {
+      await _storage.delete(key: 'access_token');
+      await _storage.delete(key: 'refresh_token');
+    } catch (_) {}
+    _sessaoExpirou = true;
+    notifyListeners();
+  }
 
   // Inicializa tokens salvos
   Future<void> initialize() async {
@@ -42,6 +69,9 @@ class AuthService extends ChangeNotifier {
         await _storage.write(key: 'refresh_token', value: refresh);
       } catch (_) {}
     });
+
+    // Sessão morta no servidor → logout gracioso + flag pra SnackBar.
+    _apiService.setOnSessionExpired(_forcarLogoutPorExpiracao);
 
     try {
       _accessToken = await _storage.read(key: 'access_token');
