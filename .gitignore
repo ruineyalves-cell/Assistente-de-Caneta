@@ -22,6 +22,10 @@ backups/
 # Play Store assets gerados (SVG é fonte, PNG é output)
 docs/play-store/assets/out/
 
+# Claude Code local settings — pode conter comandos com API keys
+# em Bash() permissions. launch.json é seguro (só configura preview).
+.claude/settings.local.json
+
 # Node
 node_modules/
 npm-debug.log*

@@ -1,34 +1,35 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 const shots = [
   {
-    file: '/screenshots/screenshot-1-boas-vindas.svg',
+    file: '/screenshots/screenshot-1-boas-vindas.png',
     title: 'Boas-vindas',
     caption:
       'Onboarding em 3 telas — menos de 1 minuto até o primeiro registro.',
   },
   {
-    file: '/screenshots/screenshot-2-dashboard.svg',
+    file: '/screenshots/screenshot-2-dashboard.png',
     title: 'Dashboard',
     caption:
       'Quatro eixos numa tela — refeição, água, peso e sintomas em vista única.',
   },
   {
-    file: '/screenshots/screenshot-3-lembrete-dose.svg',
+    file: '/screenshots/screenshot-3-lembrete-dose.png',
     title: 'Lembrete da dose',
     caption:
       'Notificação véspera + no dia. Escolhe o dia da semana e o horário.',
   },
   {
-    file: '/screenshots/screenshot-4-sintomas.svg',
+    file: '/screenshots/screenshot-4-sintomas.png',
     title: 'Sintomas',
     caption:
       '15 sintomas curados de bulas Anvisa, registrados com intensidade.',
   },
   {
-    file: '/screenshots/screenshot-5-pdf-medico.svg',
+    file: '/screenshots/screenshot-5-pdf-medico.png',
     title: 'PDF médico',
     caption: 'Um clique gera relatório completo em PDF para levar à consulta.',
   },
@@ -143,12 +144,19 @@ export default function ScreenshotsGallery() {
                     : 'border-white/[0.08] shadow-2xl shadow-black/60'
                 }`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={s.file}
                   alt={s.title}
+                  width={1080}
+                  height={1920}
+                  // Priorizamos a screenshot ativa + a próxima (i<2 antes; agora
+                  // considera a active também pra pre-loadar a que vai entrar).
+                  priority={i === 0}
+                  loading={i === 0 ? undefined : 'lazy'}
+                  // `sizes` guia o navegador a baixar variante certa do srcset
+                  // — em mobile carrega ~340px de largura, em desktop ~380px.
+                  sizes="(max-width: 640px) 280px, (max-width: 768px) 340px, 380px"
                   className="w-full h-full object-contain"
-                  loading={i < 2 ? 'eager' : 'lazy'}
                   draggable={false}
                 />
                 {/* Reflexo diagonal sutil */}

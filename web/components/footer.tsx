@@ -27,6 +27,7 @@ export default function Footer() {
             <li><Link href="/#baixar" className="hover:text-recorpo-text transition-colors">Baixar</Link></li>
             <li><Link href="/portal/login" className="hover:text-recorpo-text transition-colors">Portal médico</Link></li>
             <li><Link href="/suporte" className="hover:text-recorpo-text transition-colors">Suporte</Link></li>
+            <li><Link href="/status" className="hover:text-recorpo-text transition-colors">Status do sistema</Link></li>
           </ul>
         </div>
 
