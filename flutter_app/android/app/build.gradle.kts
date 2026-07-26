@@ -35,8 +35,17 @@ android {
         // Health Connect (Lote 11) exige API >= 26; libs de câmera/OCR
         // usadas nos Lotes 9-10 também rodam melhor a partir daí.
         minSdk = 26
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        // Lote G3 — Play Store exige targetSdk >= 35 desde Aug/2025 pra
+        // aceitar novos uploads. Fixamos aqui (ignorando flutter.targetSdkVersion)
+        // pra não depender do canal Flutter instalado — CI e dev local
+        // sempre buildam contra 35.
+        targetSdk = 35
+        // Lote G3 — versionCode automático a partir do CI. Cada push
+        // gera build com versionCode incremental (10000 + github.run_number).
+        // Local sem CI usa 1 pra debug; Play Store nunca aceita reenvio
+        // com mesmo versionCode.
+        val ciVersionCode = System.getenv("CI_VERSION_CODE")?.toIntOrNull()
+        versionCode = ciVersionCode ?: flutter.versionCode
         versionName = flutter.versionName
     }
 

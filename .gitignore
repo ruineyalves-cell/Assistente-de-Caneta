@@ -19,6 +19,9 @@ google-services.json
 *.sql.gz
 backups/
 
+# Play Store assets gerados (SVG é fonte, PNG é output)
+docs/play-store/assets/out/
+
 # Node
 node_modules/
 npm-debug.log*

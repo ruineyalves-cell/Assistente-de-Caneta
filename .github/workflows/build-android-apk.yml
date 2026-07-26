@@ -86,8 +86,20 @@ jobs:
         working-directory: ./flutter_app
         run: flutter pub get
 
+      - name: Compute versionCode from CI run
+        id: version
+        run: |
+          # Base 10000 evita colisão com versionCode 1 usado em dev local.
+          # Cada push incrementa via github.run_number, monotonicamente crescente.
+          # Play Store recusa reenvio com mesmo versionCode; isso resolve pra sempre.
+          VC=$((10000 + ${{ github.run_number }}))
+          echo "code=$VC" >> "$GITHUB_OUTPUT"
+          echo "CI_VERSION_CODE=$VC (build #${{ github.run_number }})"
+
       - name: Build APK (Release)
         working-directory: ./flutter_app
+        env:
+          CI_VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           set -o pipefail
           flutter build apk --release 2>&1 | tee /tmp/build-apk.log || {
@@ -100,6 +112,8 @@ jobs:
       - name: Build AAB (Release, for Play Store)
         if: steps.keystore.outputs.signed == 'true'
         working-directory: ./flutter_app
+        env:
+          CI_VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           set -o pipefail
           flutter build appbundle --release 2>&1 | tee /tmp/build-aab.log || {
