@@ -8,7 +8,11 @@ const { z } = require('zod');
  * POST /api/ia/bula      (Lote 32.8) — bula de medicamento
  *
  * Estratégia:
- *  - Se `GEMINI_API_KEY` estiver setada, usa Gemini 1.5 Flash.
+ *  - Se `GEMINI_API_KEY` estiver setada, usa Gemini Flash Latest
+ *    (alias que sempre aponta pra melhor Flash multimodal disponível
+ *    — hoje 2.5 Flash; antes 2.0 Flash; antes 1.5 Flash). Cota grátis
+ *    das chaves AI Studio: 15 RPM + 1M tokens/dia — bate exatamente
+ *    com o iaLimiter (15/min por usuário) no rateLimiter.js.
  *  - Se `OPENAI_API_KEY` estiver setada, usa gpt-4o-mini.
  *  - Se nada estiver setado, devolve `iaConfigurada:false` — não é
  *    erro: o Flutter cai para fallback local (label ML Kit no caso
@@ -133,9 +137,15 @@ function _normalizarBula(j) {
 // ─────────────────────────────────────────────────────────────
 // Motor de análise — chamada HTTP
 // ─────────────────────────────────────────────────────────────
+// Alias oficial do Google — sempre resolve pro Flash multimodal mais
+// recente. Evita bug de "modelo descontinuado" (gemini-1.5-flash foi
+// removido em 2025). Se um dia quisermos fixar (ex.: gemini-2.5-flash),
+// override via env var GEMINI_MODEL.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+
 async function _chamarGemini(imagemBase64, prompt, apiKey) {
   const url =
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' +
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=` +
     encodeURIComponent(apiKey);
   const body = {
     contents: [
