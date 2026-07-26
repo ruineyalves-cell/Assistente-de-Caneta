@@ -6,9 +6,7 @@ import '../services/auth_service.dart';
 import '../services/logs_provider.dart';
 import '../services/meal_recognition_service.dart';
 import '../utils/constants.dart';
-import '../utils/theme.dart';
 import '../widgets/info_pill.dart';
-import '../widgets/symptoms_sheet.dart';
 
 /// Lote 21 — Tela de resultado da IA de refeição.
 ///

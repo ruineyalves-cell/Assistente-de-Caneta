@@ -16,9 +16,11 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     memStorage = <String, String>{};
-    const MethodChannel(
-      'plugins.it_nomads.com/flutter_secure_storage',
-    ).setMockMethodCallHandler((call) async {
+    TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async {
       final key = call.arguments is Map
           ? (call.arguments as Map)['key'] as String?
           : null;
@@ -43,7 +45,8 @@ void main() {
           return null;
       }
       return null;
-    });
+    },
+    );
   });
 
   group('AppLockService — setup e verificação', () {

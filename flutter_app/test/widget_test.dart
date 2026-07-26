@@ -21,12 +21,15 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     // Mock do canal do flutter_secure_storage para não travar em teste.
-    const MethodChannel(
-      'plugins.it_nomads.com/flutter_secure_storage',
-    ).setMockMethodCallHandler((call) async {
-      if (call.method == 'read') return null;
-      return null;
-    });
+    TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async {
+        if (call.method == 'read') return null;
+        return null;
+      },
+    );
   });
 
   testWidgets('1ª execução: mostra o gate de Termos e Privacidade',

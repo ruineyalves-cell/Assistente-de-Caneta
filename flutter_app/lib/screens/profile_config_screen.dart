@@ -229,7 +229,7 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
     return [
       // 1) Eixo
       DropdownButtonFormField<EixoFarmacologico>(
-        value: _eixo,
+        initialValue: _eixo,
         decoration: const InputDecoration(
           labelText: 'Eixo farmacológico',
           prefixIcon: Icon(Icons.science_outlined),
@@ -254,7 +254,7 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
           )
         else
           DropdownButtonFormField<int?>(
-            value: _medicacaoIdSelecionada,
+            initialValue: _medicacaoIdSelecionada,
             decoration: const InputDecoration(
               labelText: 'Medicação',
               prefixIcon: Icon(Icons.medication_outlined),
@@ -1100,7 +1100,7 @@ class _DropdownGenero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<IdentidadeGenero>(
-      value: valor,
+      initialValue: valor,
       decoration: const InputDecoration(
         labelText: 'Identidade de gênero',
         prefixIcon: Icon(Icons.person_outline),
@@ -1121,7 +1121,7 @@ class _DropdownSexo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<SexoBiologico>(
-      value: valor,
+      initialValue: valor,
       decoration: const InputDecoration(
         labelText: 'Sexo biológico',
         prefixIcon: Icon(Icons.biotech_outlined),

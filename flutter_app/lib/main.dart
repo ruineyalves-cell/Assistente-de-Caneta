@@ -14,7 +14,6 @@ import 'screens/profile_config_screen.dart';
 import 'screens/app_lock_screen.dart';
 import 'services/app_lock_service.dart';
 import 'services/auth_service.dart';
-import 'services/api_service.dart';
 import 'services/feature_usage_service.dart';
 import 'services/logs_provider.dart';
 import 'services/premium_service.dart';
