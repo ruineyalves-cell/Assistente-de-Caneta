@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { audit, requireConsent } = require('../middleware/lgpd');
-const { authLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, iaLimiter } = require('../middleware/rateLimiter');
 
 const auth = require('../controllers/authController');
 const meds = require('../controllers/medicationController');
@@ -54,10 +54,12 @@ r.get('/logs/dashboard', ...paciente, audit('read', 'dashboard'), logs.dashboard
 // --- IA de visão (Lote 21). Paciente autenticado com consentimento;
 // auditamos como "read" porque a imagem passa pelo servidor mas
 // deliberadamente NÃO persiste em disco (só pra IA externa efêmera).
-r.post('/ia/refeicao', ...paciente, audit('read', 'ia_refeicao'), ia.analisar);
+// iaLimiter (Lote G1): 15 req/min por usuário — evita abuso de cota
+// da Gemini se conta for comprometida ou app entrar em loop.
+r.post('/ia/refeicao', ...paciente, iaLimiter, audit('read', 'ia_refeicao'), ia.analisar);
 // Lote 32.8 — Rótulo alimentar + bula (mesma engine Gemini).
-r.post('/ia/rotulo', ...paciente, audit('read', 'ia_rotulo'), ia.analisarRotulo);
-r.post('/ia/bula', ...paciente, audit('read', 'ia_bula'), ia.analisarBula);
+r.post('/ia/rotulo', ...paciente, iaLimiter, audit('read', 'ia_rotulo'), ia.analisarRotulo);
+r.post('/ia/bula', ...paciente, iaLimiter, audit('read', 'ia_bula'), ia.analisarBula);
 
 // --- Portal do profissional (read-only; auditoria com titular = paciente acessado) ---
 const prof = [requireAuth, requireRole('profissional')];
