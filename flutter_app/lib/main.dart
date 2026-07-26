@@ -19,6 +19,7 @@ import 'services/logs_provider.dart';
 import 'services/premium_service.dart';
 import 'services/theme_controller.dart';
 import 'utils/theme.dart';
+import 'widgets/dashboard_skeleton.dart';
 import 'widgets/quota_exceeded_sheet.dart';
 import 'widgets/score_card.dart';
 import 'widgets/streak_badge.dart';
@@ -1553,7 +1554,9 @@ class _HomePageState extends State<HomePage> {
     return Consumer<LogsProvider>(
       builder: (context, logsProvider, _) {
         if (logsProvider.isLoading || !_contextoCarregado) {
-          return const Center(child: CircularProgressIndicator());
+          // Skeleton reflete a estrutura do dashboard — reduz percepção
+          // de espera vs CircularProgressIndicator centralizado.
+          return const DashboardSkeleton();
         }
 
         // Peso mais recente reportado nos logs (topo da lista, se ordenada

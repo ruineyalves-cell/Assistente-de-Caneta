@@ -145,4 +145,95 @@ describe('calcularResumo', () => {
     const p = r.linhas.find((l) => l.tipo === 'peso');
     expect(p.texto).toContain('87,2');
   });
+
+  // ─── Edge cases (Lote I4) ───────────────────────────────────
+
+  test('1 sintoma não-intenso cita o nome', () => {
+    const r = calcularResumo({
+      perfil: null,
+      logHoje: {
+        efeitos: JSON.stringify({
+          sintomas: [{ nome: 'Fadiga', intensidade: 'leve' }],
+        }),
+      },
+      agora: NOITE,
+    });
+    const s = r.linhas.find((l) => l.tipo === 'sintomas');
+    expect(s.texto).toBe('1 sintoma registrado hoje: Fadiga.');
+  });
+
+  test('efeitos com JSON quebrado não crasha, só ignora', () => {
+    const r = calcularResumo({
+      perfil: null,
+      logHoje: { efeitos: '{"sintomas": [broken' },
+      agora: NOITE,
+    });
+    const s = r.linhas.find((l) => l.tipo === 'sintomas');
+    expect(s).toBeUndefined();
+    expect(r.vazio).toBe(true);
+  });
+
+  test('efeitos válido mas sem array sintomas é tolerado', () => {
+    const r = calcularResumo({
+      perfil: null,
+      logHoje: { efeitos: JSON.stringify({ outraCoisa: 42 }) },
+      agora: MANHA,
+    });
+    expect(r.linhas.find((l) => l.tipo === 'sintomas')).toBeUndefined();
+  });
+
+  test('alimentos com só linhas de peso conta 0 refeições', () => {
+    const r = calcularResumo({
+      perfil: null,
+      logHoje: {
+        alimentos: 'Peso: 70,0 kg @ Casa\nPeso: 69,9 kg @ Academia',
+      },
+      agora: TARDE,
+    });
+    expect(r.linhas.find((l) => l.tipo === 'refeicao')).toBeUndefined();
+  });
+
+  test('perfil sem pesoInicial não menciona proteína nem meta absoluta de água', () => {
+    const r = calcularResumo({
+      perfil: { metaAguaMlKg: 35 }, // sem pesoInicialKg → sem meta em ml
+      logHoje: { aguaMl: 1500 },
+      agora: TARDE,
+    });
+    // Como não tem meta absoluta, deve mostrar só "Hidratação de hoje: X L"
+    const agua = r.linhas.find((l) => l.tipo === 'agua');
+    expect(agua.texto).toMatch(/Hidratação de hoje.*1,5 L/);
+    expect(agua.texto).not.toMatch(/meta/i);
+    // Sem proteína registrada, não aparece linha de proteína
+    expect(r.linhas.find((l) => /prote[ií]na/i.test(l.texto))).toBeUndefined();
+  });
+
+  test('água exatamente no valor da meta conta como batida', () => {
+    const r = calcularResumo({
+      perfil: { pesoInicialKg: 80, metaAguaMlKg: 35 }, // meta 2800ml
+      logHoje: { aguaMl: 2800 },
+      agora: TARDE,
+    });
+    const agua = r.linhas.find((l) => l.tipo === 'agua');
+    expect(agua.texto).toMatch(/batida/i);
+  });
+
+  test('log só com dose aplicada não é considerado vazio', () => {
+    const r = calcularResumo({
+      perfil: null,
+      logHoje: { doseAplicada: true },
+      agora: MANHA,
+    });
+    expect(r.vazio).toBe(false);
+    expect(r.linhas).toHaveLength(1);
+    expect(r.linhas[0].tipo).toBe('dose');
+  });
+
+  test('doseAplicada = false não aparece na linha', () => {
+    const r = calcularResumo({
+      perfil: null,
+      logHoje: { doseAplicada: false },
+      agora: MANHA,
+    });
+    expect(r.linhas.find((l) => l.tipo === 'dose')).toBeUndefined();
+  });
 });
