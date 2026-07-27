@@ -1096,7 +1096,16 @@ class _DashboardPageState extends State<DashboardPage> {
       // adicionamos padding-bottom no scroll da HomePage para não ficar
       // escondido atrás da pílula.
       extendBody: true,
-      body: _pages[_selectedIndex],
+      // IndexedStack mantém as 3 páginas em memória e só troca a visível.
+      // Sem isso, cada tap na nav destruía a página anterior e chamava
+      // initState() da nova → cada troca disparava fetches novos ao
+      // backend (dashboard, logs, health connect, alertas, resumo).
+      // Com o stack, backend é chamado 1x por login e trocar aba fica
+      // instantâneo. Custo: ~10 MB RAM (irrelevante).
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: FloatingNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
