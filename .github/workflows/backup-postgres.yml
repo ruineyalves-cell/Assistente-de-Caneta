@@ -1,0 +1,73 @@
+name: Backup Postgres
+
+# Roda 03:00 UTC diariamente (00:00 BRT). Também roda sob demanda via
+# GitHub UI (workflow_dispatch) — útil pra backup pré-migração.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+# Sem permissões extras: só lê o repo e escreve artifacts (implícito).
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar postgresql-client-18
+        # A imagem ubuntu-latest não vem com pg_dump v18 (só v14/v16),
+        # e usar versão mais antiga que o servidor causa erro:
+        # "server version 18.x; pg_dump version 14.x". Adicionamos o
+        # PPA oficial do PGDG.
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - >/dev/null 2>&1
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+          pg_dump --version
+
+      - name: Validar segredo presente
+        env:
+          RENDER_POSTGRES_URL: ${{ secrets.RENDER_POSTGRES_URL }}
+        run: |
+          if [ -z "$RENDER_POSTGRES_URL" ]; then
+            echo "::error::Secret RENDER_POSTGRES_URL ausente. Configure em Settings → Secrets → Actions."
+            exit 1
+          fi
+          echo "Secret encontrada (não vou printar o valor)."
+
+      - name: pg_dump — formato custom (rápido pra restore)
+        env:
+          RENDER_POSTGRES_URL: ${{ secrets.RENDER_POSTGRES_URL }}
+        run: |
+          STAMP=$(date -u +%Y%m%d_%H%M%SZ)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          mkdir -p backup
+          pg_dump --format=custom --file="backup/recorpo_${STAMP}.dump" "$RENDER_POSTGRES_URL"
+          ls -lh backup/
+
+      - name: pg_dump — formato SQL comprimido (legível, redundância)
+        env:
+          RENDER_POSTGRES_URL: ${{ secrets.RENDER_POSTGRES_URL }}
+        run: |
+          pg_dump --format=plain "$RENDER_POSTGRES_URL" | gzip -9 > "backup/recorpo_${STAMP}.sql.gz"
+          ls -lh backup/
+
+      - name: Upload dos backups como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-backup-${{ env.STAMP }}
+          path: backup/
+          # 30 dias é o mínimo razoável pra cobrir esquecimentos.
+          # GitHub Free tem 500 MB de storage total de artifacts;
+          # dump atual é ~50 KB, cabe 10 000 backups.
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Resumo
+        run: |
+          echo "### Backup concluído" >> "$GITHUB_STEP_SUMMARY"
+          echo "Arquivos: backup/recorpo_${STAMP}.{dump,sql.gz}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Retenção: 30 dias como artifact do workflow." >> "$GITHUB_STEP_SUMMARY"
+          echo "Restore: \`pg_restore --clean --if-exists -d \$RENDER_POSTGRES_URL recorpo_*.dump\`" >> "$GITHUB_STEP_SUMMARY"
