@@ -475,7 +475,14 @@ class ApiService {
         '/api/ia/refeicao',
         data: {'imagemBase64': imagemBase64},
         // Análise pode demorar mais que os 70s padrão do Render frio
-        options: Options(receiveTimeout: const Duration(seconds: 120)),
+        options: Options(
+          // Gemini pode demorar 30-60s em prompts com JSON estruturado
+          // grande (bula, rótulo). Cold-start Render + retry backoff soma
+          // outros ~55s. Damos 180s de folga pra não estourar antes de
+          // esgotar o retry do interceptor.
+          receiveTimeout: const Duration(seconds: 180),
+          sendTimeout: const Duration(seconds: 60),
+        ),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -492,7 +499,14 @@ class ApiService {
       final response = await _dio.post(
         '/api/ia/rotulo',
         data: {'imagemBase64': imagemBase64},
-        options: Options(receiveTimeout: const Duration(seconds: 120)),
+        options: Options(
+          // Gemini pode demorar 30-60s em prompts com JSON estruturado
+          // grande (bula, rótulo). Cold-start Render + retry backoff soma
+          // outros ~55s. Damos 180s de folga pra não estourar antes de
+          // esgotar o retry do interceptor.
+          receiveTimeout: const Duration(seconds: 180),
+          sendTimeout: const Duration(seconds: 60),
+        ),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -510,7 +524,14 @@ class ApiService {
       final response = await _dio.post(
         '/api/ia/bula',
         data: {'imagemBase64': imagemBase64},
-        options: Options(receiveTimeout: const Duration(seconds: 120)),
+        options: Options(
+          // Gemini pode demorar 30-60s em prompts com JSON estruturado
+          // grande (bula, rótulo). Cold-start Render + retry backoff soma
+          // outros ~55s. Damos 180s de folga pra não estourar antes de
+          // esgotar o retry do interceptor.
+          receiveTimeout: const Duration(seconds: 180),
+          sendTimeout: const Duration(seconds: 60),
+        ),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -568,6 +589,9 @@ class ApiService {
     if (status == 502 || status == 503 || status == 504) {
       return 'O servidor está acordando. Tente novamente em ~1 minuto.';
     }
+    if (status == 429) {
+      return 'Muitas requisições em pouco tempo. Aguarde 1 minuto.';
+    }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.sendTimeout) {
@@ -584,7 +608,14 @@ class ApiService {
       if (data is Map && data.containsKey('message')) {
         return data['message'] as String;
       }
+      // Backend respondeu mas sem body JSON esperado (ex: proxy do Render
+      // devolveu HTML de erro). Incluímos o status pra facilitar debug
+      // sem expor stack trace ao usuário.
+      return 'Falha inesperada do servidor (HTTP ${status ?? '?'}). '
+          'Tente novamente em alguns segundos.';
     }
-    return e.message ?? 'Erro na requisição';
+    // Erro sem response nem tipo tratado — provavelmente conexão instável.
+    final baseMsg = e.message ?? e.type.toString();
+    return 'Erro de rede ($baseMsg). Verifique sua conexão e tente de novo.';
   }
 }

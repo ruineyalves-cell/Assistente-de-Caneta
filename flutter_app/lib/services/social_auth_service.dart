@@ -81,9 +81,11 @@ class SocialAuthService {
 
   String _amigavel(Object e) {
     final msg = e.toString();
+    // DEVELOPER_ERROR (código 10) = par package+SHA-1 do APK não bate com
+    // nenhum OAuth Client Android. Enquanto o par está reservado pelo
+    // Firebase antigo em soft-delete, o botão fica "desligado".
     if (msg.contains('DEVELOPER_ERROR') || msg.contains('10:')) {
-      return 'Login social ainda não configurado. Peça ao suporte pra concluir a '
-          'configuração no Firebase (SHA-1 + OAuth Client ID).';
+      return 'Login com Google chegando em breve. Use email por enquanto.';
     }
     if (msg.contains('NETWORK') || msg.contains('network')) {
       return 'Sem conexão pra falar com o Google. Verifique sua internet.';
