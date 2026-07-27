@@ -16,6 +16,10 @@
     <!-- Lote 22 — Steps + Peso (Health Connect real) -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <!-- Lote 32.1 — Sono para correlacionar com fadiga GLP-1. Sem esta
+         permission, hasPermissions([5 tipos]) sempre retorna false e a
+         UI trava em "Autorização necessária" mesmo após conceder tudo. -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
 
     <!-- Notificações locais (Lote 19). POST_NOTIFICATIONS é exigido no
          Android 13+ e pedido em runtime. SCHEDULE_EXACT_ALARM garante
