@@ -31,15 +31,23 @@ export default function PrivacidadePage() {
 
       <div className="mt-14 p-6 rounded-2xl border border-white/[0.08] bg-recorpo-surface/60">
         <p className="text-sm text-recorpo-dim">
-          Para solicitar acesso, correção, exportação ou exclusão dos seus
-          dados, escreva para o Encarregado (DPO) em{' '}
+          Para solicitar acesso, correção ou exportação dos seus dados,
+          escreva para o Encarregado (DPO) em{' '}
           <a
             href="mailto:recorpoapp@gmail.com"
             className="text-brand-primaryLight underline underline-offset-2"
           >
             recorpoapp@gmail.com
           </a>{' '}
-          — respondemos em até 15 dias corridos.
+          — respondemos em até 15 dias corridos. Para{' '}
+          <strong>excluir sua conta</strong> siga o passo-a-passo em{' '}
+          <a
+            href="/excluir-conta"
+            className="text-brand-primaryLight underline underline-offset-2"
+          >
+            /excluir-conta
+          </a>
+          .
         </p>
       </div>
     </LegalLayout>

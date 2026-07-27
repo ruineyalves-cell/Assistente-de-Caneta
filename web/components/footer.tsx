@@ -38,6 +38,7 @@ export default function Footer() {
           <ul className="space-y-2.5">
             <li><Link href="/privacidade" className="hover:text-recorpo-text transition-colors">Privacidade</Link></li>
             <li><Link href="/termos" className="hover:text-recorpo-text transition-colors">Termos de uso</Link></li>
+            <li><Link href="/excluir-conta" className="hover:text-recorpo-text transition-colors">Excluir minha conta</Link></li>
             <li>
               <a
                 href="mailto:recorpoapp@gmail.com"
