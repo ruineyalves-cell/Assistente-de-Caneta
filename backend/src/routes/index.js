@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { audit, requireConsent } = require('../middleware/lgpd');
-const { authLimiter, iaLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, iaLimiter, subscriptionLimiter } = require('../middleware/rateLimiter');
 
 const auth = require('../controllers/authController');
 const meds = require('../controllers/medicationController');
@@ -10,6 +10,7 @@ const logs = require('../controllers/dailyLogController');
 const doctor = require('../controllers/doctorController');
 const lgpd = require('../controllers/lgpdController');
 const ia = require('../controllers/iaController');
+const sub = require('../controllers/subscriptionController');
 
 const r = Router();
 
@@ -60,6 +61,16 @@ r.post('/ia/refeicao', ...paciente, iaLimiter, audit('read', 'ia_refeicao'), ia.
 // Lote 32.8 — Rótulo alimentar + bula (mesma engine Gemini).
 r.post('/ia/rotulo', ...paciente, iaLimiter, audit('read', 'ia_rotulo'), ia.analisarRotulo);
 r.post('/ia/bula', ...paciente, iaLimiter, audit('read', 'ia_bula'), ia.analisarBula);
+
+// --- Assinatura Premium via Play Billing.
+// validar: chamado UMA vez após purchase confirmar no app.
+// status: consultado sempre que o app precisa checar Premium (com cache 12h).
+// rtdn: webhook Pub/Sub do Play — NÃO autenticado por JWT, protegido por
+// segredo compartilhado opcional (RTDN_SHARED_SECRET) + re-consulta Play
+// sempre pra validar (nunca confia no payload).
+r.post('/assinaturas/validar', requireAuth, subscriptionLimiter, audit('create', 'subscription'), sub.validar);
+r.get('/assinaturas/status', requireAuth, sub.status);
+r.post('/assinaturas/rtdn', sub.rtdn);
 
 // --- Portal do profissional (read-only; auditoria com titular = paciente acessado) ---
 const prof = [requireAuth, requireRole('profissional')];

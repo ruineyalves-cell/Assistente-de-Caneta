@@ -52,4 +52,29 @@ const iaLimiter = rateLimit({
   },
 });
 
-module.exports = { apiLimiter, authLimiter, iaLimiter };
+/**
+ * Rate limit para /api/assinaturas/validar.
+ *
+ * Cada validação faz round-trip à Play API (rate limit deles é 200k/dia
+ * — folgado, mas gasta cota + latência). Não faz sentido um app legítimo
+ * validar mais que ~5x/min: uma vez após purchase, quando muito o
+ * usuário reabre a compra. 20/min por usuário é gerenciável.
+ */
+const subscriptionLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_SUB_MAX) || 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.ip,
+  handler: (req, res) => {
+    logSeguranca('subscription_rate_limit', {
+      userId: req.user?.id || null,
+      ip: req.ip,
+    });
+    return res.status(429).json({
+      erro: 'Muitas validações em pouco tempo. Aguarde 1 minuto.',
+    });
+  },
+});
+
+module.exports = { apiLimiter, authLimiter, iaLimiter, subscriptionLimiter };
