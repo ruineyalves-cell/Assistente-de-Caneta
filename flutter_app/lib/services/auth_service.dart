@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/constants.dart';
 import 'api_service.dart';
 import 'social_auth_service.dart';
 
@@ -155,13 +157,10 @@ class AuthService extends ChangeNotifier {
         await _storage.write(key: 'nome', value: _nome!);
       }
 
-      // Garante o consentimento LGPD (aceito no cadastro) para liberar os
-      // dados de saúde no backend (requireConsent). Best-effort nos demais.
-      try {
-        await _apiService.registrarConsentimento('privacidade_saude');
-        _apiService.registrarConsentimento('termos_uso');
-        _apiService.registrarConsentimento('disclaimer_medico');
-      } catch (_) {}
+      // LGPD (F1): sincroniza aceite local pré-login com o backend.
+      // Se backend já tem registro (mesmo revogação), respeita — impede
+      // que login "reative" consent revogado.
+      await _sincronizarConsentimentoLGPD();
 
       _isLoading = false;
       notifyListeners();
@@ -222,13 +221,9 @@ class AuthService extends ChangeNotifier {
         await _storage.write(key: 'nome', value: _nome!);
       }
 
-      // Consentimentos LGPD implícitos (o consent screen do Google já
-      // pediu email/profile; o disclaimer do app cobre saúde).
-      try {
-        await _apiService.registrarConsentimento('privacidade_saude');
-        _apiService.registrarConsentimento('termos_uso');
-        _apiService.registrarConsentimento('disclaimer_medico');
-      } catch (_) {}
+      // LGPD (F1): mesmo padrão do login por email — sincroniza aceite
+      // local se existir, sem sobrescrever revogação prévia no backend.
+      await _sincronizarConsentimentoLGPD();
 
       _isLoading = false;
       notifyListeners();
@@ -238,6 +233,38 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       rethrow;
+    }
+  }
+
+  /// Sincroniza o aceite LGPD registrado localmente (DisclaimerScreen
+  /// pré-login) com o backend — mas SÓ SE nunca houve registro pra
+  /// aquele tipo. Se o backend já tem qualquer registro (aceito OU
+  /// revogado), respeita a decisão prévia — impede que login "reative"
+  /// consent revogado (violava art. 8º §5º LGPD).
+  ///
+  /// Best-effort: se a chamada falhar, tenta de novo no próximo login.
+  /// Não bloqueia o fluxo.
+  Future<void> _sincronizarConsentimentoLGPD() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final aceitouLocal =
+          prefs.getBool(AppConstants.keyDisclaimerAceito) ?? false;
+      if (!aceitouLocal) return;
+
+      final registros = await _apiService.listarConsentimentos();
+      final tiposJaRegistrados = registros.map((r) => r['tipo']).toSet();
+      const tiposParaSync = [
+        'privacidade_saude',
+        'termos_uso',
+        'disclaimer_medico',
+      ];
+      for (final tipo in tiposParaSync) {
+        if (!tiposJaRegistrados.contains(tipo)) {
+          await _apiService.registrarConsentimento(tipo);
+        }
+      }
+    } catch (_) {
+      // silencioso — próximo login tenta de novo. Não bloqueia UX.
     }
   }
 

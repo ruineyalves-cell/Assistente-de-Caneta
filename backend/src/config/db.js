@@ -11,9 +11,16 @@
  * replica, basta setar `DATABASE_READ_URL` no ambiente — nenhuma
  * refatoração de código.
  *
- * SEGURANÇA: `ssl: rejectUnauthorized:false` é aceitável pra Render
- * (certificado gerenciado por eles) mas nunca use em ambiente com CA
- * custom — nesse caso, forneça o cert via PGSSLROOTCERT.
+ * SEGURANÇA (F3):
+ *   - `PGSSL=true`  → força TLS aceitando cert self-signed do Render (ok
+ *     porque a rede interna do Render é isolada; Postgres público seria
+ *     PGSSLROOTCERT com CA custom).
+ *   - Sem PGSSL     → deixamos ssl `undefined`, o que faz o pg lib
+ *     PARSEAR `sslmode=` da URL. Nossa DATABASE_URL termina com
+ *     `?sslmode=require`, então TLS fica ligado por padrão. Antes usávamos
+ *     `ssl:false` explícito, que SOBRESCREVIA o sslmode= e conectaria em
+ *     plaintext se um dia mudarmos de provider (Render força TLS
+ *     server-side, então nunca quebrou em prod — mas ficava frágil).
  */
 let db, dbRead, dbWrite;
 
@@ -28,7 +35,7 @@ if (process.env.NODE_ENV === 'development' && !process.env.DATABASE_URL) {
   function novoPool(url, tag) {
     const pool = new Pool({
       connectionString: url,
-      ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
       // max=5 é seguro pro Render Starter (limite de 97 conexões) mesmo
       // com múltiplas instâncias no futuro. Idle 30s libera pra outras
       // requests não ficarem esperando.

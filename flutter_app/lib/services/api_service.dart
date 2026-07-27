@@ -535,6 +535,20 @@ class ApiService {
     }
   }
 
+  /// Lista histórico de consentimentos LGPD do usuário logado.
+  /// Retorna array de `{tipo, versaoDoc, aceito, createdAt}` — mais
+  /// recente primeiro. Usado pra decidir se sincronizamos aceite local
+  /// pré-login sem sobrescrever revogação prévia (F1).
+  Future<List<Map<String, dynamic>>> listarConsentimentos() async {
+    try {
+      final response = await _dio.get('/api/lgpd/consentimentos');
+      final lista = (response.data as Map)['consentimentos'] as List?;
+      return (lista ?? []).cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> exportarDados() async {
     try {
       final response = await _dio.get('/api/lgpd/exportar');

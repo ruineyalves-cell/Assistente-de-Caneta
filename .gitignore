@@ -13,6 +13,13 @@ keys.txt
 backend/keys.txt
 google-services.json
 !**/google-services.json.example
+# Scripts locais de deploy geralmente têm creds inline enquanto se
+# desenvolve. Se um dia forem versionados, use env vars e commite sem
+# a extensão local (deploy-render.example.js).
+deploy-render.js
+deploy-render.local.*
+DEPLOY_RENDER.md
+firebase-debug.log
 
 # Backups PG
 *.dump
