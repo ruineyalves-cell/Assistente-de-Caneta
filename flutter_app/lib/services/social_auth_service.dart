@@ -22,13 +22,22 @@ class SocialAuthService {
 
   bool get suportado => !kIsWeb; // Web tem fluxo próprio, deixado pra depois
 
-  /// Web OAuth Client ID do projeto Firebase `recorpo-d39a3`.
+  /// Web OAuth Client ID do projeto GCP `Recorpo` (conta nariz.de.perito).
   /// Passado como `serverClientId` para o plugin — assim o idToken devolvido
   /// tem `aud` = Web Client ID, que é o que o backend valida em
   /// `GOOGLE_OAUTH_CLIENT_IDS`. Sem isto, o Android usa o Client ID do
   /// próprio APK e o backend recusa o token.
+  ///
+  /// Substituiu o `416740367847-...` do projeto Firebase `recorpo-d39a3`
+  /// (excluído em jul/2026, retornava `invalid_client`).
+  ///
+  /// Android OAuth Client não foi criado ainda — o Firebase antigo
+  /// ainda está em soft-delete e reserva o par (package+SHA-1). Sem o
+  /// Android Client, sign-in silencioso não funciona (menos crítico);
+  /// o fluxo interativo (usuário clica em "Entrar com Google") funciona
+  /// 100% só com Web Client via serverClientId.
   static const String _webClientId =
-      '416740367847-0tc538sg1a4o7ucvepcblb95uftd32pg.apps.googleusercontent.com';
+      '503231624179-csm7j635gbb3lf1b2h2creinpdj3s0jv.apps.googleusercontent.com';
 
   GoogleSignIn _lazy() {
     return _google ??= GoogleSignIn(
