@@ -14,17 +14,27 @@ permissions:
 jobs:
   dump:
     runs-on: ubuntu-latest
+    # Ubuntu 24.04 vem com pg_dump v16 pré-instalado como default no PATH.
+    # Postgres 18.x do Render exige pg_dump >= 18. Ao instalar
+    # postgresql-client-18 via PPA, o binário fica em
+    # /usr/lib/postgresql/18/bin/ mas o link /usr/bin/pg_dump continua
+    # apontando pra v16. Colocamos o path da v18 na frente do PATH pra
+    # todos os steps do job (env: no job).
+    env:
+      PATH: /usr/lib/postgresql/18/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Instalar postgresql-client-18
         # A imagem ubuntu-latest não vem com pg_dump v18 (só v14/v16),
         # e usar versão mais antiga que o servidor causa erro:
-        # "server version 18.x; pg_dump version 14.x". Adicionamos o
+        # "server version 18.x; pg_dump version 16.x". Adicionamos o
         # PPA oficial do PGDG.
         run: |
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - >/dev/null 2>&1
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-18
+          # Sanity: essa versão bate com Postgres 18 do server?
+          which pg_dump
           pg_dump --version
 
       - name: Validar segredo presente
