@@ -44,6 +44,9 @@ r.get('/pacientes/pre-consulta', ...paciente, audit('read', 'pre_consulta'), pat
 r.get('/pacientes/alertas', ...paciente, audit('read', 'alertas'), patient.alertas);
 // Lote 32.3 — Resumo diário determinístico.
 r.get('/pacientes/resumo-diario', ...paciente, audit('read', 'resumo_diario'), patient.resumoDiario);
+// F2.2 portal web — paciente baixa seu próprio relatório PDF (sem
+// precisar passar pelo fluxo médico↔paciente). Auditamos como export.
+r.get('/pacientes/meu-relatorio.pdf', ...paciente, audit('export', 'relatorio_pdf'), patient.meuRelatorioPdf);
 r.get('/pacientes/profissionais', ...paciente, patient.listarProfissionais);
 r.post('/pacientes/profissionais', ...paciente, patient.convidarProfissional);
 r.delete('/pacientes/profissionais/:id', ...paciente, patient.revogarProfissional);

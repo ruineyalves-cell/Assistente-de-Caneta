@@ -55,7 +55,22 @@ const nextConfig = {
       'https://assistente-caneta-backend-tkl7.onrender.com',
   },
   async headers() {
+    // Permissions-Policy mais permissivo pro /app/* onde o scanner IA
+    // precisa da câmera. Fora de /app, câmera continua bloqueada.
+    const appPermissions = securityHeaders.map((h) =>
+      h.key === 'Permissions-Policy'
+        ? {
+            key: 'Permissions-Policy',
+            value:
+              'camera=(self), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=()',
+          }
+        : h
+    );
     return [
+      {
+        source: '/app/:path*',
+        headers: appPermissions,
+      },
       {
         source: '/:path*',
         headers: securityHeaders,

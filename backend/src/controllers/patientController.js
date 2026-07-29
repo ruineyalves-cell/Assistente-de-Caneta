@@ -9,6 +9,8 @@ const { calcularFatos } = require('../utils/preConsulta');
 const { selecionarPerguntas } = require('../utils/perguntasPreConsulta');
 const { calcularAlertas } = require('../utils/alertas');
 const { calcularResumo } = require('../utils/resumoDiario');
+const { calcularStreak } = require('../utils/metrics');
+const { gerarRelatorio } = require('../utils/pdf');
 
 // Lote 31 — enums espelham lib/models/patient_profile.dart no cliente.
 // Mantidos como strings livres (VARCHAR) porque a lista pode evoluir
@@ -206,4 +208,37 @@ async function resumoDiario(req, res, next) {
   }
 }
 
-module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta, alertas, resumoDiario };
+/** GET /api/pacientes/meu-relatorio.pdf — F2.2 portal web.
+ *
+ * Espelha doctorController.relatorioPdf mas usa req.user.id como paciente:
+ * o próprio usuário baixa seu relatório sem passar pelo fluxo de médico
+ * vinculado. Mesma lógica de PDF, mesmo conjunto de dados. */
+async function meuRelatorioPdf(req, res, next) {
+  try {
+    const patientId = req.user.id;
+    const [paciente, perfilP, logs, scores, datas] = await Promise.all([
+      userModel.porId(patientId),
+      patientModel.perfil(patientId),
+      dailyLogModel.listar(patientId, { limite: 90 }),
+      dailyLogModel.scores(patientId, 28),
+      dailyLogModel.datasComLog(patientId, 60),
+    ]);
+    const pdf = await gerarRelatorio({
+      paciente,
+      perfil: perfilP,
+      logs,
+      scores,
+      streak: calcularStreak(datas, new Date().toISOString().slice(0, 10)),
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="recorpo-relatorio-${patientId.slice(0, 8)}.pdf"`
+    );
+    return res.send(pdf);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { salvarPerfil, obterPerfil, convidarProfissional, revogarProfissional, listarProfissionais, preConsulta, alertas, resumoDiario, meuRelatorioPdf };

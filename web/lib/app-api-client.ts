@@ -151,4 +151,57 @@ export const api = {
     request<Array<{ tipo: string; aceito: boolean }>>(
       '/api/lgpd/consentimentos'
     ),
+  exportarDados: () => request<Record<string, unknown>>('/api/lgpd/exportar'),
+  listarAcessos: () =>
+    request<Array<Record<string, unknown>>>('/api/lgpd/acessos'),
+  excluirConta: () =>
+    request<{ ok: true }>('/api/lgpd/conta', { method: 'DELETE' }),
+
+  /**
+   * F2.2 — Baixar relatório médico em PDF (versão paciente).
+   * Retorna o Blob direto pra download; o wrapper `request<T>` não
+   * serve porque espera JSON. Reusa o mesmo estado de token/refresh.
+   */
+  baixarMeuRelatorioPdf: () => baixarBlob('/api/pacientes/meu-relatorio.pdf'),
+
+  // Scanner IA (F2.3) — reusa endpoints já existentes do backend.
+  analisarRefeicaoIA: (imagemBase64: string) =>
+    request<Record<string, unknown>>('/api/ia/refeicao', {
+      method: 'POST',
+      body: JSON.stringify({ imagemBase64 }),
+    }),
+  analisarRotuloIA: (imagemBase64: string) =>
+    request<Record<string, unknown>>('/api/ia/rotulo', {
+      method: 'POST',
+      body: JSON.stringify({ imagemBase64 }),
+    }),
+  analisarBulaIA: (imagemBase64: string) =>
+    request<Record<string, unknown>>('/api/ia/bula', {
+      method: 'POST',
+      body: JSON.stringify({ imagemBase64 }),
+    }),
 };
+
+async function baixarBlob(path: string, jaTentouRefresh = false): Promise<Blob> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (res.status === 401 && !jaTentouRefresh) {
+    const novo = await tentarRefresh();
+    if (novo) return baixarBlob(path, true);
+    throw new ApiError(401, 'Sessão expirou. Faça login.');
+  }
+  if (!res.ok) {
+    let msg = `Erro HTTP ${res.status}`;
+    try {
+      const j = await res.json();
+      msg = j?.erro || msg;
+    } catch {
+      /* corpo não é JSON */
+    }
+    throw new ApiError(res.status, msg);
+  }
+  return res.blob();
+}

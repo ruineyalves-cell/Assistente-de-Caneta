@@ -23,6 +23,51 @@ type Estado =
 
 const MEDICACOES = ['', 'Ozempic', 'Wegovy', 'Mounjaro', 'Saxenda', 'Rybelsus'];
 
+function BotaoRelatorio() {
+  const [baixando, setBaixando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function baixar() {
+    setBaixando(true);
+    setErro(null);
+    try {
+      const blob = await api.baixarMeuRelatorioPdf();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const dataFmt = new Date().toISOString().slice(0, 10);
+      a.download = `recorpo-relatorio-${dataFmt}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErro(
+        e instanceof ApiError
+          ? e.message
+          : (e as Error).message ?? 'Erro ao baixar'
+      );
+    } finally {
+      setBaixando(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={baixar}
+        disabled={baixando}
+        className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primaryDark disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {baixando ? 'Gerando PDF…' : 'Baixar PDF do médico'}
+      </button>
+      {erro && (
+        <p className="mt-2 text-xs text-eixo-sintomas">{erro}</p>
+      )}
+    </>
+  );
+}
+
 export default function PerfilPage() {
   const { estado, logout } = useAuth();
   const [dados, setDados] = useState<Estado>({ status: 'loading' });
@@ -219,25 +264,35 @@ export default function PerfilPage() {
             )}
 
             <Card>
+              <Label>Relatório médico</Label>
+              <p className="mt-2 text-sm text-recorpo-text">
+                PDF com seus últimos 90 dias — leve pro médico na consulta.
+              </p>
+              <BotaoRelatorio />
+            </Card>
+
+            <Card>
+              <Label>Meus dados (LGPD)</Label>
+              <p className="mt-2 text-sm text-recorpo-text">
+                Exportar em JSON, ver trilha de acessos, excluir sua conta.
+              </p>
+              <Link
+                href="/app/meus-dados"
+                className="mt-3 inline-block rounded-lg border border-recorpo-border px-4 py-2 text-sm text-recorpo-text hover:border-brand-primary hover:bg-recorpo-surfaceHi"
+              >
+                Abrir meus dados →
+              </Link>
+            </Card>
+
+            <Card>
               <Label>Sessão</Label>
-              <div className="mt-3 space-y-2">
+              <div className="mt-3">
                 <button
                   onClick={logout}
                   className="w-full rounded-lg border border-eixo-sintomas/40 py-2.5 text-sm text-eixo-sintomas hover:bg-eixo-sintomas/10"
                 >
                   Sair
                 </button>
-                <p className="text-center text-xs text-recorpo-muted">
-                  Pra apagar sua conta e todos os dados (LGPD art. 18 VI),
-                  acesse a{' '}
-                  <Link
-                    href="/excluir-conta"
-                    className="text-brand-primaryLight hover:underline"
-                  >
-                    página dedicada
-                  </Link>
-                  .
-                </p>
               </div>
             </Card>
           </div>

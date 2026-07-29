@@ -203,7 +203,22 @@ export default function AppDashboardPage() {
               titulo="Sintomas"
               onClick={() => abrir('sintomas')}
             />
-            <AcaoRapida icone="📄" titulo="Relatório" hint="Fase 2" disabled />
+            <AcaoRapida
+              icone="📄"
+              titulo="Relatório"
+              hint="PDF"
+              href="/app/perfil#relatorio"
+            />
+          </div>
+        </section>
+
+        {/* Scanners IA — separados porque abrem página inteira (câmera) */}
+        <section className="mt-6">
+          <Label>Scanner com IA</Label>
+          <div className="mt-2 grid grid-cols-3 gap-3">
+            <AcaoRapida icone="📸" titulo="Refeição" href="/app/scan/refeicao" />
+            <AcaoRapida icone="🏷️" titulo="Rótulo" href="/app/scan/rotulo" />
+            <AcaoRapida icone="💉" titulo="Bula" href="/app/scan/bula" />
           </div>
         </section>
 
@@ -340,27 +355,43 @@ function AcaoRapida({
   titulo,
   hint,
   onClick,
+  href,
   disabled = false,
 }: {
   icone: string;
   titulo: string;
   hint?: string;
   onClick?: () => void;
+  href?: string;
   disabled?: boolean;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="group flex flex-col items-center gap-1 rounded-xl border border-recorpo-border bg-recorpo-surface py-4 text-recorpo-text transition hover:border-brand-primary hover:bg-recorpo-surfaceHi disabled:cursor-not-allowed disabled:opacity-60"
-      aria-label={`Registrar ${titulo}`}
-    >
+  const className =
+    'group flex flex-col items-center gap-1 rounded-xl border border-recorpo-border bg-recorpo-surface py-4 text-recorpo-text transition hover:border-brand-primary hover:bg-recorpo-surfaceHi disabled:cursor-not-allowed disabled:opacity-60';
+  const conteudo = (
+    <>
       <span className="text-2xl" aria-hidden>
         {icone}
       </span>
       <span className="text-sm font-medium">{titulo}</span>
       {hint && <span className="text-[10px] text-recorpo-muted">{hint}</span>}
+    </>
+  );
+  if (href && !disabled) {
+    return (
+      <a href={href} className={className} aria-label={titulo}>
+        {conteudo}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      aria-label={`Registrar ${titulo}`}
+    >
+      {conteudo}
     </button>
   );
 }
