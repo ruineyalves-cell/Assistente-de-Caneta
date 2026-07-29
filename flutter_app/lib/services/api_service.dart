@@ -100,11 +100,27 @@ class ApiService {
     );
   }
 
+  /// Future do warm-up em progresso. LoginScreen consome via
+  /// [aguardarWarmUp] pra segurar o clique em "Entrar" até o backend
+  /// responder /health — em vez de deixar o user ver o SnackBar
+  /// "servidor está acordando" quando ele foi rápido pra digitar.
+  Future<void>? _warmUpFuture;
+  bool _warmUpCompleto = false;
+
   /// Faz um GET silencioso em /health pra tirar o backend Render do
   /// estado hibernado antes do usuário disparar a primeira request.
   /// Não bloqueia, não propaga erro — o objetivo é apenas cutucar o
   /// container pra estar quente quando o login for enviado.
-  Future<void> warmUp() async {
+  ///
+  /// Idempotente: chamadas repetidas retornam o mesmo Future se ainda
+  /// em progresso. Após completar, retorna Future concluído imediato.
+  Future<void> warmUp() {
+    if (_warmUpCompleto) return Future.value();
+    _warmUpFuture ??= _executarWarmUp();
+    return _warmUpFuture!;
+  }
+
+  Future<void> _executarWarmUp() async {
     try {
       await _dio.get(
         '/health',
@@ -115,8 +131,16 @@ class ApiService {
       );
     } catch (_) {
       // Silencioso — se falhou, o retry do login vai cobrir.
+    } finally {
+      _warmUpCompleto = true;
     }
   }
+
+  /// LoginScreen chama isto ANTES do POST /auth/login. Se o warm-up
+  /// disparado no boot já terminou, retorna imediato. Se ainda está em
+  /// progresso, aguarda (o botão Entrar mostra spinner nesse período).
+  /// Se warm-up nunca foi chamado, dispara agora e aguarda.
+  Future<void> aguardarWarmUp() => warmUp();
 
   void setTokens(String accessToken, String refreshToken) {
     _accessToken = accessToken;

@@ -3,10 +3,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import 'api_service.dart';
+import 'biometric_login_service.dart';
 import 'social_auth_service.dart';
 
 class AuthService extends ChangeNotifier {
   final ApiService _apiService = ApiService();
+  final BiometricLoginService _biometric = BiometricLoginService();
+
+  /// Login rápido com digital/face — API pública consumida por
+  /// LoginScreen (mostrar botão) e por ProfileScreen (toggle).
+  BiometricLoginService get biometric => _biometric;
 
   /// Acesso público ao ApiService — usado pelo main.dart para o warm-up
   /// do backend no boot (ping /health silencioso enquanto o user lê a
@@ -136,6 +142,13 @@ class AuthService extends ChangeNotifier {
       _isLoading = true;
       _error = null;
       notifyListeners();
+
+      // Aguarda o warm-up do backend (disparado no boot em main.dart)
+      // completar antes de tentar login. Se já completou, retorna
+      // imediato. Se ainda está em progresso, o user vê o spinner do
+      // botão Entrar (contexto claro) em vez do SnackBar "servidor
+      // está acordando" (que era confuso e assustava).
+      await _apiService.aguardarWarmUp();
 
       final response = await _apiService.login(
         email: email,
@@ -268,6 +281,51 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Login rápido usando credenciais salvas no cofre biométrico.
+  /// Pede a digital/face → se OK, faz login normal com email/senha
+  /// que estavam no [BiometricLoginService].
+  ///
+  /// Retorna:
+  ///   - `true` se autenticou e logou com sucesso
+  ///   - `false` se: sem credenciais salvas, biometria cancelada,
+  ///     ou 401 (senha mudou no servidor — limpa cofre e força
+  ///     tela de login normal)
+  Future<bool> loginComBiometria() async {
+    if (!await _biometric.temCredenciaisSalvas()) return false;
+    final creds = await _biometric.obterCredenciaisComBiometria();
+    if (creds == null) return false;
+    try {
+      await login(email: creds.email, senha: creds.senha);
+      return true;
+    } catch (e) {
+      // Se a senha mudou no servidor (401), o cofre está com dado
+      // stale — limpa e obriga o user a redigitar. É a única forma
+      // segura de saber que a credencial expirou.
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('inválido') ||
+          msg.contains('invalido') ||
+          msg.contains('senha') ||
+          msg.contains('401')) {
+        await _biometric.limpar();
+      }
+      rethrow;
+    }
+  }
+
+  /// Opt-in: grava credenciais no cofre biométrico após o user
+  /// aceitar o dialog "Ativar login rápido?". Idempotente — pode ser
+  /// chamado múltiplas vezes com senha atualizada.
+  Future<bool> ativarLoginBiometrico({
+    required String email,
+    required String senha,
+  }) {
+    return _biometric.salvarCredenciais(email: email, senha: senha);
+  }
+
+  /// Desativa login rápido (limpa cofre). User pode chamar via
+  /// toggle no Perfil ou automaticamente pelo logout.
+  Future<void> desativarLoginBiometrico() => _biometric.limpar();
+
   Future<void> logout() async {
     try {
       _isLoading = true;
@@ -286,6 +344,10 @@ class AuthService extends ChangeNotifier {
       await _storage.delete(key: 'user_id');
       await _storage.delete(key: 'email');
       await _storage.delete(key: 'nome');
+
+      // Limpa cofre biométrico no logout — se outro usuário do
+      // aparelho acessar o app, não pode entrar como este.
+      await _biometric.limpar();
 
       _isLoading = false;
       notifyListeners();

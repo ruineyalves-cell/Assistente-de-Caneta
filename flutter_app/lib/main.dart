@@ -303,9 +303,15 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscureSenha = true;
   String? errorMessage;
 
+  // Botão biométrico só aparece se o device suporta E o user já
+  // ativou login rápido em sessão anterior. Reavaliamos em initState
+  // e após qualquer login bem-sucedido.
+  bool _mostrarBotaoBiometria = false;
+
   @override
   void initState() {
     super.initState();
+    _checarBiometriaDisponivel();
     // Se caímos aqui porque o backend invalidou a sessão (rotação de
     // JWT_SECRET, refresh reusado, revogado), o AuthService marca a flag.
     // Mostramos SnackBar amigável em vez de deixar o usuário sem contexto.
@@ -322,6 +328,14 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     });
+  }
+
+  Future<void> _checarBiometriaDisponivel() async {
+    final auth = context.read<AuthService>();
+    final disponivel = await auth.biometric.biometriaDisponivel();
+    final temSalvo = await auth.biometric.temCredenciaisSalvas();
+    if (!mounted) return;
+    setState(() => _mostrarBotaoBiometria = disponivel && temSalvo);
   }
 
   @override
@@ -342,19 +356,105 @@ class _LoginPageState extends State<LoginPage> {
 
       setState(() => isLoading = true);
 
-      await authService.login(
-        email: emailController.text,
-        senha: passwordController.text,
-      );
+      final email = emailController.text;
+      final senha = passwordController.text;
+      await authService.login(email: email, senha: senha);
 
       if (!mounted) return;
+
+      // Login OK. Se o device suporta biometria e o user ainda não
+      // salvou credenciais, oferecer opt-in de login rápido. Se ele
+      // recusar, não pergunta de novo nesta sessão.
+      await _talvezOferecerBiometria(email: email, senha: senha);
+      if (!mounted) return;
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardPage()),
       );
     } catch (e) {
       setState(() => errorMessage = e.toString());
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  /// Login rápido: usa credenciais salvas + biometria em vez do form.
+  void _handleLoginBiometrico() async {
+    final authService = context.read<AuthService>();
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+      final ok = await authService.loginComBiometria();
+      if (!mounted) return;
+      if (!ok) {
+        setState(() => isLoading = false);
+        // Ok = false: biometria cancelada, sem credenciais salvas, ou
+        // toque rápido no botão sem digital. Sem mensagem de erro —
+        // user simplesmente digita a senha manualmente.
+        return;
+      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
+      );
+    } catch (e) {
+      // 401 (senha mudou) já limpou o cofre — some o botão.
+      _checarBiometriaDisponivel();
+      setState(() => errorMessage = e.toString());
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  /// Oferece opt-in de biometria depois de um login por senha bem-
+  /// sucedido. Só pergunta se: device suporta, ainda não tem cred
+  /// salva, e não pediu antes nesta instalação.
+  Future<void> _talvezOferecerBiometria({
+    required String email,
+    required String senha,
+  }) async {
+    final authService = context.read<AuthService>();
+    final disponivel = await authService.biometric.biometriaDisponivel();
+    if (!disponivel) return;
+    final jaTem = await authService.biometric.temCredenciaisSalvas();
+    if (jaTem) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    // Se o user recusou uma vez, não fica insistindo. Ele pode ativar
+    // depois pelo toggle no Perfil.
+    if (prefs.getBool('biometric_opt_in_recusado') == true) return;
+
+    if (!mounted) return;
+    final aceitar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.fingerprint, size: 42),
+        title: const Text('Login rápido com biometria'),
+        content: const Text(
+          'Nas próximas vezes, você pode entrar só com a sua digital '
+          'ou reconhecimento facial — sem digitar email e senha.\n\n'
+          'Suas credenciais ficam criptografadas no cofre seguro do '
+          'aparelho e só são liberadas após você confirmar a biometria.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Agora não'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ativar'),
+          ),
+        ],
+      ),
+    );
+    if (aceitar == true) {
+      await authService.ativarLoginBiometrico(email: email, senha: senha);
+    } else {
+      await prefs.setBool('biometric_opt_in_recusado', true);
     }
   }
 
@@ -633,6 +733,32 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                         const SizedBox(height: 14),
+                        // Login rápido: só aparece se o device suporta
+                        // biometria E o user já ativou antes. Some se
+                        // ele desativar no Perfil ou fizer logout.
+                        if (_mostrarBotaoBiometria) ...[
+                          SizedBox(
+                            height: 52,
+                            child: FilledButton.icon(
+                              onPressed:
+                                  isLoading ? null : _handleLoginBiometrico,
+                              icon: const Icon(Icons.fingerprint, size: 22),
+                              label: const Text(
+                                'Continuar com digital / face',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.azulClinico,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                         // Lote 20 — Botão de login com Google.
                         SizedBox(
                           height: 52,
@@ -1086,8 +1212,13 @@ class _DashboardPageState extends State<DashboardPage> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
-            onPressed: () {
-              context.read<AuthService>().logout();
+            onPressed: () async {
+              // Limpa cache local ANTES do logout: se dois usuários
+              // compartilharem o aparelho, o próximo login não pode ver
+              // dashboard/logs do anterior.
+              await context.read<LogsProvider>().limparCache();
+              if (!context.mounted) return;
+              await context.read<AuthService>().logout();
             },
           ),
         ],
@@ -2966,17 +3097,36 @@ class _HistoryPageState extends State<HistoryPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Estado vazio ainda precisa de pull-to-refresh: user pode ter
+        // registrado algo em outro celular ou o primeiro fetch falhou.
         if (logsProvider.logs.isEmpty) {
-          return const Center(
-            child: Text('Nenhum registro encontrado'),
+          return RefreshIndicator(
+            onRefresh: () => logsProvider.carregarLogs(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
+              children: const [
+                Center(child: Text('Nenhum registro encontrado')),
+                SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    'Puxe pra baixo pra atualizar',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
           );
         }
 
-        return ListView.builder(
-          // Espaço no fim para a FloatingNavBar (Lote 14) não cobrir o
-          // último card do histórico.
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          itemCount: logsProvider.logs.length,
+        return RefreshIndicator(
+          onRefresh: () => logsProvider.carregarLogs(),
+          child: ListView.builder(
+            // Espaço no fim para a FloatingNavBar (Lote 14) não cobrir o
+            // último card do histórico.
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: logsProvider.logs.length,
           itemBuilder: (context, index) {
             final log = logsProvider.logs[index];
             return Card(
@@ -3040,6 +3190,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
             );
           },
+          ),
         );
       },
     );
