@@ -1,17 +1,24 @@
-name: Deploy Site (Vercel)
+name: Deploy Site (Vercel) — Backup Manual
 
+# Este workflow é FALLBACK. O caminho normal é Vercel Git Integration
+# conectado ao repo (dashboard.vercel.com → project → Settings → Git),
+# que deploya automaticamente a cada push em `main` sem passar por aqui.
+#
+# Ative este workflow manualmente (Actions → Deploy Site → Run workflow)
+# apenas se:
+#   - Vercel Git Integration estiver desconectado ou com problema
+#   - Precisar forçar um redeploy sem novo commit
+#
+# Requer secrets no repo (Settings → Secrets and variables → Actions):
+#   - VERCEL_TOKEN     (dashboard Vercel → Account → Tokens)
+#   - VERCEL_ORG_ID    (project Vercel → Settings → General)
+#   - VERCEL_PROJECT_ID
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'web/**'
-      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ vars.ENABLE_VERCEL_DEPLOY == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
