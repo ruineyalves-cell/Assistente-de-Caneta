@@ -25,7 +25,8 @@ export default function Footer() {
           <ul className="space-y-2.5">
             <li><Link href="/#recursos" className="hover:text-recorpo-text transition-colors">Recursos</Link></li>
             <li><Link href="/#baixar" className="hover:text-recorpo-text transition-colors">Baixar</Link></li>
-            <li><Link href="/portal/login" className="hover:text-recorpo-text transition-colors">Portal médico</Link></li>
+            <li><Link href="/app/login" className="hover:text-recorpo-text transition-colors">Usar no navegador</Link></li>
+            <li><Link href="/portal/login" className="hover:text-recorpo-text transition-colors">Área do médico</Link></li>
             <li><Link href="/suporte" className="hover:text-recorpo-text transition-colors">Suporte</Link></li>
             <li><Link href="/status" className="hover:text-recorpo-text transition-colors">Status do sistema</Link></li>
           </ul>

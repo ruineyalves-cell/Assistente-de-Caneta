@@ -33,16 +33,24 @@ export default function Nav() {
             href="/portal/login"
             className="hover:text-recorpo-text transition-colors"
           >
-            Portal médico
+            Área do médico
           </Link>
         </nav>
 
-        <Link
-          href="/#baixar"
-          className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-primary-gradient text-white shadow-glowSoft hover:brightness-110 transition-all"
-        >
-          Baixe grátis
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/app/login"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-recorpo-border text-recorpo-text hover:border-brand-primaryLight hover:bg-white/[0.03] transition-all"
+          >
+            Entrar
+          </Link>
+          <Link
+            href="/#baixar"
+            className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-primary-gradient text-white shadow-glowSoft hover:brightness-110 transition-all"
+          >
+            Baixe grátis
+          </Link>
+        </div>
       </div>
     </header>
   );

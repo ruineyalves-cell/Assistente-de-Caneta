@@ -47,12 +47,21 @@ export default function Home() {
                 </svg>
               </a>
               <a
-                href="#recursos"
+                href="/app/login"
                 className="inline-flex items-center gap-2 font-semibold px-6 py-3.5 rounded-full border border-white/10 text-recorpo-text hover:border-brand-primaryLight hover:text-brand-primaryLight transition-colors"
+              >
+                Usar no navegador
+              </a>
+            </div>
+            <p className="mt-3 text-xs text-recorpo-dim">
+              iPhone, iPad ou qualquer navegador — sem baixar nada.{' '}
+              <a
+                href="/#recursos"
+                className="text-brand-primaryLight hover:underline"
               >
                 Ver como funciona
               </a>
-            </div>
+            </p>
 
             <div className="mt-10 grid grid-cols-3 gap-6 max-w-md">
               <Stat n="15" l="Sintomas curados de bulas Anvisa" />
