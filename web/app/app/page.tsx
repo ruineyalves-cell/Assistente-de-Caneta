@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from './_lib/auth-provider';
 import { useDashboardData } from './_lib/dashboard-data';
@@ -15,7 +15,33 @@ import { Card, ErroBox, Kpi, Label, Skeleton, EmptyState } from './_lib/ui';
 
 type TipoSheet = 'dose' | 'agua' | 'peso' | 'refeicao' | 'sintomas' | null;
 
+/**
+ * Next 14 exige que useSearchParams() esteja dentro de <Suspense>. Sem
+ * isso o build falha com "missing-suspense-with-csr-bailout". Como o
+ * dashboard inteiro usa o hook (pro deep-link do PWA), o export
+ * default só envelopa o conteúdo real em Suspense.
+ */
 export default function AppDashboardPage() {
+  return (
+    <Suspense fallback={<TelaCarregando />}>
+      <DashboardConteudo />
+    </Suspense>
+  );
+}
+
+function TelaCarregando() {
+  return (
+    <main className="grid min-h-dvh place-items-center">
+      <div
+        className="h-8 w-8 animate-spin rounded-full border-2 border-recorpo-border border-t-brand-primaryLight"
+        role="status"
+        aria-label="Carregando"
+      />
+    </main>
+  );
+}
+
+function DashboardConteudo() {
   const { estado, logout } = useAuth();
   const accessToken =
     estado.status === 'autenticado' ? estado.accessToken : null;
