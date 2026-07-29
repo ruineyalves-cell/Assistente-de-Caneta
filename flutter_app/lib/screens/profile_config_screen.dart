@@ -523,6 +523,10 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
             // Lote 32.5 — Segurança do app (PIN + biometria).
             const _CardAppLock(),
             const SizedBox(height: 16),
+            // Login rápido: biometria substitui digitação de email/senha
+            // no login. Separado do AppLock (que é gate pós-login).
+            const _CardLoginBiometrico(),
+            const SizedBox(height: 16),
             // Lote 32.7 — Notificações contextuais.
             const _CardNotificacoes(),
             const SizedBox(height: 16),
@@ -1189,6 +1193,217 @@ class _ErroCarga extends StatelessWidget {
             label: const Text('Tentar de novo'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Cartão do Perfil pra ativar/desativar login rápido com biometria.
+///
+/// Diferente do [_CardAppLock] (que é gate PÓS-login com PIN+biometria),
+/// este controla se as credenciais ficam salvas no cofre pra login
+/// rápido. Se o device não suporta biometria, o card não renderiza.
+class _CardLoginBiometrico extends StatefulWidget {
+  const _CardLoginBiometrico();
+
+  @override
+  State<_CardLoginBiometrico> createState() => _CardLoginBiometricoState();
+}
+
+class _CardLoginBiometricoState extends State<_CardLoginBiometrico> {
+  bool _carregando = true;
+  bool _suportado = false;
+  bool _ativo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
+  Future<void> _carregar() async {
+    final auth = context.read<AuthService>();
+    final suportado = await auth.biometric.biometriaDisponivel();
+    final ativo = await auth.biometric.temCredenciaisSalvas();
+    if (!mounted) return;
+    setState(() {
+      _suportado = suportado;
+      _ativo = ativo;
+      _carregando = false;
+    });
+  }
+
+  Future<void> _desativar() async {
+    final auth = context.read<AuthService>();
+    await auth.desativarLoginBiometrico();
+    if (!mounted) return;
+    setState(() => _ativo = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Login rápido desativado. Suas credenciais foram apagadas do cofre.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _ativar() async {
+    // Pra ativar aqui no Perfil, precisamos das credenciais atuais.
+    // Como o user já está logado (não temos a senha em memória),
+    // pedimos pra ele redigitar num dialog. É o único jeito seguro —
+    // access token não serve como "senha" pra futuros logins.
+    final creds = await _pedirCredenciais(context);
+    if (creds == null) return;
+    if (!mounted) return;
+    final auth = context.read<AuthService>();
+    // Confirma que a senha ainda é válida chamando login. Se der 401,
+    // não grava nada e mostra erro amigável.
+    try {
+      await auth.login(email: creds.$1, senha: creds.$2);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível confirmar sua senha: ${e.toString()}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final ok = await auth.ativarLoginBiometrico(
+      email: creds.$1,
+      senha: creds.$2,
+    );
+    if (!mounted) return;
+    setState(() => _ativo = ok);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Login rápido ativado. Na próxima vez use sua digital ou face.'
+            : 'Não foi possível ativar. Tente de novo.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<(String, String)?> _pedirCredenciais(BuildContext context) async {
+    final auth = context.read<AuthService>();
+    final emailCtrl = TextEditingController(text: auth.email ?? '');
+    final senhaCtrl = TextEditingController();
+    bool ocultarSenha = true;
+    final aceitar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          icon: const Icon(Icons.fingerprint, size: 42),
+          title: const Text('Confirmar credenciais'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Pra ativar o login rápido, confirme sua senha atual. '
+                'Ela ficará criptografada no cofre do aparelho.',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: senhaCtrl,
+                obscureText: ocultarSenha,
+                decoration: InputDecoration(
+                  labelText: 'Senha atual',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(ocultarSenha
+                        ? Icons.visibility
+                        : Icons.visibility_off),
+                    onPressed: () =>
+                        setSt(() => ocultarSenha = !ocultarSenha),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Ativar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (aceitar != true) return null;
+    if (emailCtrl.text.isEmpty || senhaCtrl.text.isEmpty) return null;
+    return (emailCtrl.text, senhaCtrl.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_carregando) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(RecorpoSpacing.md),
+          child: Center(
+              child: SizedBox(
+                  height: 20, width: 20, child: CircularProgressIndicator())),
+        ),
+      );
+    }
+    // Se o device não tem biometria configurada, esconde o card
+    // inteiro — não faz sentido oferecer o que não vai funcionar.
+    if (!_suportado) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(RecorpoSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.fingerprint, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Login rápido',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _ativo
+                  ? 'Ativo · use digital ou face pra entrar sem digitar senha.'
+                  : 'Ative pra entrar com sua digital ou face nas próximas vezes.',
+              style: const TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: _ativo
+                  ? OutlinedButton.icon(
+                      onPressed: _desativar,
+                      icon: const Icon(Icons.no_encryption_outlined),
+                      label: const Text('Desativar'),
+                    )
+                  : FilledButton.icon(
+                      onPressed: _ativar,
+                      icon: const Icon(Icons.fingerprint),
+                      label: const Text('Ativar login rápido'),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
