@@ -39,12 +39,25 @@ export function CameraCapture({ onCaptura, onCancelar, hint }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [base64Cache, setBase64Cache] = useState<string | null>(null);
 
-  // Boot: tenta abrir câmera. Se falhar (permissão negada, HTTPS
-  // ausente, device sem câmera), cai pro fallback upload.
+  const [motivoFallback, setMotivoFallback] = useState<string | null>(null);
+
+  // Boot: tenta abrir câmera. Se falhar, guarda o motivo específico
+  // pra mostrar hint útil ao user (permissão negada vs sem câmera vs
+  // HTTP não-secure).
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        setMotivoFallback(
+          'Seu navegador não suporta captura direta de câmera. Use "Da galeria" abaixo.'
+        );
+        setModo('fallback');
+        return;
+      }
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        setMotivoFallback(
+          'Câmera exige conexão segura (HTTPS). Envie foto da galeria.'
+        );
         setModo('fallback');
         return;
       }
@@ -67,7 +80,34 @@ export function CameraCapture({ onCaptura, onCancelar, hint }: Props) {
         }
         setModo('ao-vivo');
       } catch (e) {
-        console.warn('Câmera indisponível:', e);
+        const err = e as DOMException;
+        console.warn('Câmera indisponível:', err.name, err.message);
+        // Mensagens específicas por tipo de erro — user consegue agir.
+        let motivo: string;
+        switch (err.name) {
+          case 'NotAllowedError':
+          case 'PermissionDeniedError':
+            motivo =
+              'Você negou o acesso à câmera. Toque no cadeado ao lado do endereço e permita "Câmera" pra tentar de novo, ou envie da galeria.';
+            break;
+          case 'NotFoundError':
+          case 'DevicesNotFoundError':
+            motivo =
+              'Nenhuma câmera encontrada neste aparelho. Envie foto da galeria.';
+            break;
+          case 'NotReadableError':
+          case 'TrackStartError':
+            motivo =
+              'Câmera ocupada por outro app. Feche apps de câmera/vídeo e tente de novo, ou envie da galeria.';
+            break;
+          case 'OverconstrainedError':
+            motivo =
+              'Seu aparelho não tem câmera traseira. Enviando da galeria funciona.';
+            break;
+          default:
+            motivo = `Não consegui abrir a câmera (${err.name || 'erro'}). Envie da galeria.`;
+        }
+        setMotivoFallback(motivo);
         setModo('fallback');
       }
     })();
@@ -220,20 +260,21 @@ export function CameraCapture({ onCaptura, onCancelar, hint }: Props) {
             📷
           </span>
           <p className="mt-3 text-sm text-recorpo-text">
-            Câmera indisponível neste navegador.
-          </p>
-          <p className="mt-1 text-xs text-recorpo-dim">
-            Envie uma foto da galeria pra continuar.
+            {motivoFallback ?? 'Câmera indisponível.'}
           </p>
           <label className="mt-4 inline-flex cursor-pointer rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-primaryDark">
-            Escolher imagem
+            📁 Escolher imagem
             <input
               type="file"
               accept="image/*"
+              capture="environment"
               onChange={aoSelecionarArquivo}
               className="hidden"
             />
           </label>
+          <p className="mt-3 text-xs text-recorpo-muted">
+            No celular, o botão acima abre a câmera ou a galeria (você escolhe).
+          </p>
         </div>
       )}
 

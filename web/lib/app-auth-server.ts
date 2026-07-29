@@ -34,11 +34,18 @@ export type AuthResult =
   | { ok: false; erro: string };
 
 function setRefreshCookie(refreshToken: string) {
+  // path='/' pra que server actions em qualquer rota do site consigam
+  // ler o cookie. Antes usava path='/app' mas isso quebrava refresh
+  // silencioso ao navegar entre rotas quando o next roteia via server
+  // action em contexto diferente.
+  //
+  // Segurança preservada: cookie continua httpOnly (JS não lê) +
+  // Secure (só HTTPS) + SameSite=Strict (não vaza pra outros sites).
   cookies().set(REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    path: '/app',
+    path: '/',
     maxAge: COOKIE_MAX_AGE,
   });
 }

@@ -109,7 +109,9 @@ export type DailyLog = {
   aguaMl: number | null;
   alimentos: string | null;
   doseAplicada: boolean;
-  efeitosColaterais: string | null;
+  /** Backend chama de `efeitos` (JSON string com { sintomas: [...] }).
+   * Não use "efeitosColaterais" — nome só do modelo Flutter antigo. */
+  efeitos: string | null;
 };
 
 export type DashboardResp = {

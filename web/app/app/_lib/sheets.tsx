@@ -20,6 +20,14 @@ type Props = {
 // Mesmos incrementos da versão Android (WaterQuickSheet).
 const INCREMENTOS_AGUA = [250, 500, 750, 1000];
 
+/** Converte Date pro formato YYYY-MM-DD que o backend Zod aceita. */
+function dataISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
 async function postar(dados: {
   data: Date;
   pesoKg?: number;
@@ -27,18 +35,23 @@ async function postar(dados: {
   aguaMl?: number;
   alimentos?: string;
   doseAplicada?: boolean;
-  efeitosColaterais?: string;
+  efeitos?: string;
 }): Promise<{ ok: true } | { ok: false; erro: string }> {
   try {
-    await api.registrarLog({
-      data: dados.data.toISOString(),
-      pesoKg: dados.pesoKg ?? null,
-      proteinaG: dados.proteinaG ?? null,
-      aguaMl: dados.aguaMl ?? null,
-      alimentos: dados.alimentos ?? null,
+    // Backend espera:
+    //   - data: string YYYY-MM-DD (regex estrita, ISO cheio quebra)
+    //   - efeitos (NÃO efeitosColaterais): string JSON
+    //   - campos numéricos nunca undefined; usar null explícito
+    const payload: Record<string, unknown> = {
+      data: dataISO(dados.data),
       doseAplicada: dados.doseAplicada ?? false,
-      efeitosColaterais: dados.efeitosColaterais ?? null,
-    } as any);
+    };
+    if (dados.pesoKg != null) payload.pesoKg = dados.pesoKg;
+    if (dados.proteinaG != null) payload.proteinaG = dados.proteinaG;
+    if (dados.aguaMl != null) payload.aguaMl = dados.aguaMl;
+    if (dados.alimentos) payload.alimentos = dados.alimentos;
+    if (dados.efeitos) payload.efeitos = dados.efeitos;
+    await api.registrarLog(payload as any);
     return { ok: true };
   } catch (e) {
     return {
@@ -365,7 +378,7 @@ export function SintomasSheet({ aberto, onFechar, onSucesso }: Props) {
     const efeitos = JSON.stringify({ sintomas: sintomasArr });
     const r = await postar({
       data: new Date(),
-      efeitosColaterais: efeitos,
+      efeitos,
     });
     setLoading(false);
     if (r.ok) {

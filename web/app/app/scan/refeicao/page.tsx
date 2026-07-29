@@ -48,12 +48,20 @@ export default function ScanRefeicaoPage() {
     if (!resultado) return;
     setSalvando(true);
     try {
-      await api.registrarLog({
-        data: new Date().toISOString(),
+      // Backend Zod aceita só YYYY-MM-DD em `data` (não ISO cheio).
+      const hoje = new Date();
+      const y = hoje.getFullYear();
+      const m = String(hoje.getMonth() + 1).padStart(2, '0');
+      const d = String(hoje.getDate()).padStart(2, '0');
+      const payload: Record<string, unknown> = {
+        data: `${y}-${m}-${d}`,
         alimentos: resultado.titulo ?? resultado.descricao ?? 'Refeição',
-        proteinaG: resultado.proteinaEstimadaG ?? undefined,
-        aguaMl: resultado.aguaEstimadaMl ?? undefined,
-      } as any);
+      };
+      if (resultado.proteinaEstimadaG != null)
+        payload.proteinaG = resultado.proteinaEstimadaG;
+      if (resultado.aguaEstimadaMl != null)
+        payload.aguaMl = resultado.aguaEstimadaMl;
+      await api.registrarLog(payload as any);
       setSalvo(true);
     } catch (e) {
       setErro(

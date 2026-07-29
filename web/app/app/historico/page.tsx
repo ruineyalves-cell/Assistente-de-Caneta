@@ -130,7 +130,7 @@ export default function HistoricoPage() {
 }
 
 function ItemLog({ log }: { log: DailyLog }) {
-  const sintomas = parseSintomas(log.efeitosColaterais);
+  const sintomas = parseSintomas(log.efeitos);
   return (
     <Card>
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
