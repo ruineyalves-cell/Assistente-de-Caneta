@@ -272,6 +272,12 @@ class ApiService {
     }
   }
 
+  Future<void> invalidarRefreshToken(String refreshToken) async {
+    try {
+      await _dio.post('/api/auth/logout', data: {'refreshToken': refreshToken});
+    } on DioException catch (_) {}
+  }
+
   // ========== MEDICAÇÕES ==========
 
   Future<List<Map<String, dynamic>>> listarMedicacoes() async {
@@ -589,15 +595,6 @@ class ApiService {
       final response = await _dio.get('/api/lgpd/consentimentos');
       final lista = (response.data as Map)['consentimentos'] as List?;
       return (lista ?? []).cast<Map<String, dynamic>>();
-    } on DioException catch (e) {
-      throw _parseError(e);
-    }
-  }
-
-  Future<Map<String, dynamic>> exportarDados() async {
-    try {
-      final response = await _dio.get('/api/lgpd/exportar');
-      return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _parseError(e);
     }

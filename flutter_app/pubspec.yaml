@@ -30,9 +30,6 @@ dependencies:
   # Dates & formatting
   intl: ^0.20.2   # exigido pelo flutter_localizations do SDK 3.44.6
 
-  # State management (Riverpod)
-  flutter_riverpod: ^2.5.1
-
   # Persistência local (perfil e peso entre sessões)
   shared_preferences: ^2.2.3
 

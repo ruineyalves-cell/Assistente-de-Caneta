@@ -95,8 +95,15 @@ class _MealResultScreenState extends State<MealResultScreen> {
         });
       } catch (e) {
         if (!mounted) return;
+        final msg = e.toString().toLowerCase();
+        final amigavel = (msg.contains('dioexception') ||
+                msg.contains('socket') ||
+                msg.contains('connection') ||
+                msg.contains('timeout'))
+            ? 'Servidor indisponível — tente de novo em alguns segundos.'
+            : e.toString();
         setState(() {
-          _erroBackend = e.toString();
+          _erroBackend = amigavel;
           _rodandoBackend = false;
         });
       }
@@ -262,8 +269,8 @@ class _MealResultScreenState extends State<MealResultScreen> {
             ),
             const SizedBox(height: 8),
             if (_erroBackend != null)
-              Text('Falhou: $_erroBackend',
-                  style: const TextStyle(fontSize: 12, color: Colors.redAccent))
+              Text(_erroBackend!,
+                  style: TextStyle(fontSize: 12, color: Colors.orange.shade400))
             else if (_resultadoBackend == null && !_rodandoBackend)
               Text(
                 'IA detalhada ainda não ativada no servidor — sem custo você fica com o reconhecimento local acima.',

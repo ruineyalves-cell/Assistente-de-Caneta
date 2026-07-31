@@ -335,7 +335,9 @@ class _LoginPageState extends State<LoginPage> {
     final disponivel = await auth.biometric.biometriaDisponivel();
     final temSalvo = await auth.biometric.temCredenciaisSalvas();
     if (!mounted) return;
-    setState(() => _mostrarBotaoBiometria = disponivel && temSalvo);
+    final ativo = disponivel && temSalvo;
+    setState(() => _mostrarBotaoBiometria = ativo);
+    if (ativo) _handleLoginBiometrico();
   }
 
   @override

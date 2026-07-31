@@ -45,8 +45,16 @@ class _RotuloResultScreenState extends State<RotuloResultScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      final amigavel = (msg.contains('dioexception') ||
+              msg.contains('socket') ||
+              msg.contains('connection') ||
+              msg.contains('failed to fetch') ||
+              msg.contains('timeout'))
+          ? 'Servidor indisponível. Verifique sua conexão e tente de novo.'
+          : e.toString();
       setState(() {
-        _erro = e.toString();
+        _erro = amigavel;
         _carregando = false;
       });
     }

@@ -327,35 +327,36 @@ class AuthService extends ChangeNotifier {
   Future<void> desativarLoginBiometrico() => _biometric.limpar();
 
   Future<void> logout() async {
-    try {
-      _isLoading = true;
-      notifyListeners();
+    _isLoading = true;
+    notifyListeners();
 
-      await _apiService.logout();
+    // Guarda o refresh token pra invalidar no backend depois.
+    final refreshParaInvalidar = _refreshToken;
 
-      _accessToken = null;
-      _refreshToken = null;
-      _userId = null;
-      _email = null;
-      _nome = null;
+    // Limpa estado local ANTES da chamada ao backend — se o servidor
+    // estiver fora (502/cold start), o user não pode ficar preso no app.
+    _accessToken = null;
+    _refreshToken = null;
+    _userId = null;
+    _email = null;
+    _nome = null;
+    _apiService.clearTokens();
 
-      await _storage.delete(key: 'access_token');
-      await _storage.delete(key: 'refresh_token');
-      await _storage.delete(key: 'user_id');
-      await _storage.delete(key: 'email');
-      await _storage.delete(key: 'nome');
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: 'user_id');
+    await _storage.delete(key: 'email');
+    await _storage.delete(key: 'nome');
+    await _biometric.limpar();
 
-      // Limpa cofre biométrico no logout — se outro usuário do
-      // aparelho acessar o app, não pode entrar como este.
-      await _biometric.limpar();
+    _isLoading = false;
+    notifyListeners();
 
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-      rethrow;
+    // Tenta invalidar a sessão no backend (best-effort).
+    if (refreshParaInvalidar != null) {
+      try {
+        await _apiService.invalidarRefreshToken(refreshParaInvalidar);
+      } catch (_) {}
     }
   }
 

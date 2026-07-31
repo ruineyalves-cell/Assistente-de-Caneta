@@ -252,7 +252,9 @@ class PaywallScreen extends StatelessWidget {
               children: [
                 Text(titulo,
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700)),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black)),
                 if (destaque != null) ...[
                   const SizedBox(width: 8),
                   Container(
@@ -272,7 +274,9 @@ class PaywallScreen extends StatelessWidget {
                 const Spacer(),
                 Text(produto.price,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700)),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black)),
               ],
             ),
             if (economia != null) ...[

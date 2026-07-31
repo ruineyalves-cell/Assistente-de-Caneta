@@ -1008,7 +1008,7 @@ class _CardPremium extends StatelessWidget {
                       Text(
                         ehPro
                             ? 'Todas as features desbloqueadas'
-                            : 'A partir de R\$ 12,49/mês (anual)',
+                            : 'A partir de R\$ 16,66/mês (plano anual)',
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 12),
                       ),

@@ -51,7 +51,7 @@ class _ReportScreenState extends State<ReportScreen> {
               .cast<EixoFarmacologico?>()
               .firstWhere((v) => v?.name == nomeEixo, orElse: () => null);
 
-      final exportacao = await auth.apiService.exportarDados();
+      final exportacao = await auth.apiService.exportarDadosLgpd();
       final bytes = await _service.gerar(
         exportacao: exportacao,
         eixoLocal: eixo,
