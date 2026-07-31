@@ -182,6 +182,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ imagemBase64 }),
     }),
+
+  // Stripe — assinatura Premium via site
+  criarCheckoutStripe: (plano: 'mensal' | 'anual') =>
+    request<{ url: string }>('/api/stripe/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ plano }),
+    }),
+  abrirPortalStripe: () =>
+    request<{ url: string }>('/api/stripe/portal', {
+      method: 'POST',
+    }),
+  statusAssinatura: () =>
+    request<{ premium: boolean; via?: string; status?: string }>('/api/assinaturas/status'),
 };
 
 async function baixarBlob(path: string, jaTentouRefresh = false): Promise<Blob> {

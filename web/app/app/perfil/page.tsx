@@ -68,6 +68,105 @@ function BotaoRelatorio() {
   );
 }
 
+function PremiumCard() {
+  const [status, setStatus] = useState<{
+    loading: boolean;
+    premium: boolean;
+    via?: string;
+  }>({ loading: true, premium: false });
+  const [abrindo, setAbrindo] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .statusAssinatura()
+      .then((r) => setStatus({ loading: false, premium: r.premium, via: r.via }))
+      .catch(() => setStatus({ loading: false, premium: false }));
+  }, []);
+
+  async function assinar(plano: 'mensal' | 'anual') {
+    setAbrindo(plano);
+    try {
+      const r = await api.criarCheckoutStripe(plano);
+      window.location.href = r.url;
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.message : 'Erro ao iniciar pagamento.';
+      alert(msg);
+      setAbrindo(null);
+    }
+  }
+
+  async function gerenciar() {
+    setAbrindo('portal');
+    try {
+      const r = await api.abrirPortalStripe();
+      window.location.href = r.url;
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.message : 'Erro ao abrir portal.';
+      alert(msg);
+      setAbrindo(null);
+    }
+  }
+
+  if (status.loading) {
+    return (
+      <Card>
+        <Skeleton className="h-20" />
+      </Card>
+    );
+  }
+
+  if (status.premium) {
+    return (
+      <Card className="border-eixo-peso/40 bg-eixo-peso/5">
+        <Label>Recorpo Premium</Label>
+        <p className="mt-2 text-sm text-recorpo-text">
+          Você é Premium — todas as features desbloqueadas.
+        </p>
+        {status.via === 'stripe' && (
+          <button
+            onClick={gerenciar}
+            disabled={!!abrindo}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-recorpo-border px-4 py-2 text-sm text-recorpo-text hover:border-brand-primary hover:bg-recorpo-surfaceHi disabled:opacity-50"
+          >
+            {abrindo ? 'Abrindo…' : 'Gerenciar assinatura'}
+          </button>
+        )}
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-brand-primary/30 bg-brand-primary/5">
+      <Label>Recorpo Premium</Label>
+      <p className="mt-2 text-sm text-recorpo-text">
+        Desbloqueie câmera e OCR ilimitados, relatório PDF completo,
+        comparativos de 90 dias e mais.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          onClick={() => assinar('anual')}
+          disabled={!!abrindo}
+          className="rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryDark disabled:opacity-50"
+        >
+          {abrindo === 'anual' ? 'Abrindo…' : 'Anual — R$ 199,90/ano'}
+        </button>
+        <button
+          onClick={() => assinar('mensal')}
+          disabled={!!abrindo}
+          className="rounded-lg border border-brand-primary/40 px-4 py-2.5 text-sm font-medium text-brand-primaryLight hover:bg-brand-primary/10 disabled:opacity-50"
+        >
+          {abrindo === 'mensal' ? 'Abrindo…' : 'Mensal — R$ 19,90/mês'}
+        </button>
+      </div>
+      <p className="mt-2 text-[11px] text-recorpo-muted">
+        Pagamento seguro via Stripe. Cancele a qualquer momento.
+      </p>
+    </Card>
+  );
+}
+
 export default function PerfilPage() {
   const { estado, logout } = useAuth();
   const [dados, setDados] = useState<Estado>({ status: 'loading' });
@@ -262,6 +361,8 @@ export default function PerfilPage() {
             {erroSalvar && (
               <ErroBox mensagem={`Não deu pra salvar: ${erroSalvar}`} />
             )}
+
+            <PremiumCard />
 
             <Card>
               <Label>Relatório médico</Label>

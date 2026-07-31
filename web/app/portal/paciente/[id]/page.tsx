@@ -1,20 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { usePortalAuth } from '../../_lib/auth-provider';
 import {
   ApiError,
   baixarRelatorioPdf,
-  clearToken,
-  isAutenticado,
   obterPaciente,
   type PacienteDetalhe,
-} from '@/lib/api';
+} from '@/lib/portal-api-client';
 
 export default function PacienteDetalhePage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
+  const { estado } = usePortalAuth();
   const id = params.id;
 
   const [dados, setDados] = useState<PacienteDetalhe | null>(null);
@@ -22,22 +21,14 @@ export default function PacienteDetalhePage() {
   const [baixando, setBaixando] = useState(false);
 
   useEffect(() => {
-    if (!isAutenticado()) {
-      router.replace('/portal/login');
-      return;
-    }
-    if (!id) return;
+    if (estado.status !== 'autenticado' || !id) return;
     obterPaciente(id)
       .then((d) => setDados(d))
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) {
-          clearToken();
-          router.replace('/portal/login');
-          return;
-        }
+        if (err instanceof ApiError && err.status === 401) return;
         setErro(err instanceof Error ? err.message : 'Erro inesperado.');
       });
-  }, [id, router]);
+  }, [id, estado.status]);
 
   async function handleBaixarPdf() {
     if (!id) return;
@@ -57,6 +48,14 @@ export default function PacienteDetalhePage() {
     } finally {
       setBaixando(false);
     }
+  }
+
+  if (estado.status === 'carregando') {
+    return (
+      <section className="max-w-3xl mx-auto px-5 py-16">
+        <div className="text-recorpo-dim animate-pulseSoft">Carregando…</div>
+      </section>
+    );
   }
 
   if (erro) {

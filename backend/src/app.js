@@ -71,6 +71,15 @@ app.use(cors({ origin: corsOrigin, credentials: true }));
  * Solução: 10 MB só nas rotas /api/ia/*; 256 KB no restante (mais
  * apertado que antes; nenhum endpoint legítimo envia mais que isso).
  */
+// Stripe webhook precisa do body RAW (não JSON-parseado) para verificar
+// a assinatura HMAC. Registramos ANTES do express.json() global.
+const stripeCtrl = require('./controllers/stripeController');
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json', limit: '256kb' }),
+  stripeCtrl.webhook
+);
+
 app.use('/api/ia', express.json({ limit: '10mb' }));
 app.use(express.json({ limit: '256kb' }));
 

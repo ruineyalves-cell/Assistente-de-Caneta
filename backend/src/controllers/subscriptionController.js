@@ -24,6 +24,7 @@ const {
   obterAssinatura,
   acknowledgeAssinatura,
 } = require('../utils/playApi');
+const { isStripePremium } = require('./stripeController');
 const { logger, capturarErro } = require('../utils/logger');
 
 const validarSchema = z.object({
@@ -105,6 +106,11 @@ async function status(req, res, next) {
       [req.user.id]
     );
     if (rows.length === 0) {
+      // Sem assinatura Play — checar Stripe (web/iOS).
+      const stripePremium = await isStripePremium(req.user.id);
+      if (stripePremium) {
+        return res.json({ premium: true, via: 'stripe' });
+      }
       return res.json({ premium: false, motivo: 'nenhuma_assinatura' });
     }
     let row = rows[0];

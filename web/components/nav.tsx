@@ -40,7 +40,7 @@ export default function Nav() {
         <div className="flex items-center gap-2">
           <Link
             href="/app/login"
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-recorpo-border text-recorpo-text hover:border-brand-primaryLight hover:bg-white/[0.03] transition-all"
+            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-recorpo-border text-recorpo-text hover:border-brand-primaryLight hover:bg-white/[0.03] transition-all"
           >
             Entrar
           </Link>

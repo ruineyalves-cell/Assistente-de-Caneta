@@ -54,13 +54,14 @@ async function postar(dados: {
     await api.registrarLog(payload as any);
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      erro:
-        e instanceof ApiError
-          ? e.message
-          : (e as Error).message ?? 'Erro desconhecido',
-    };
+    if (e instanceof ApiError) {
+      return { ok: false, erro: e.message };
+    }
+    const msg = (e as Error).message ?? '';
+    if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
+      return { ok: false, erro: 'Servidor indisponível. Verifique sua conexão e tente de novo.' };
+    }
+    return { ok: false, erro: msg || 'Erro desconhecido' };
   }
 }
 
@@ -421,7 +422,7 @@ export function SintomasSheet({ aberto, onFechar, onSucesso }: Props) {
                           : 'border-recorpo-border text-recorpo-muted hover:border-recorpo-dim'
                       }`}
                     >
-                      {i[0]}
+                      {i === 'leve' ? 'Leve' : i === 'moderada' ? 'Mod' : 'Int'}
                     </button>
                   )
                 )}

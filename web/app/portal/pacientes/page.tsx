@@ -1,37 +1,36 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { usePortalAuth } from '../_lib/auth-provider';
 import {
   ApiError,
-  clearToken,
-  isAutenticado,
   listarPacientes,
   type PacienteResumo,
-} from '@/lib/api';
+} from '@/lib/portal-api-client';
 
 export default function PacientesListaPage() {
-  const router = useRouter();
+  const { estado, logout } = usePortalAuth();
   const [pacientes, setPacientes] = useState<PacienteResumo[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAutenticado()) {
-      router.replace('/portal/login');
-      return;
-    }
+    if (estado.status !== 'autenticado') return;
     listarPacientes()
       .then((r) => setPacientes(r.pacientes))
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) {
-          clearToken();
-          router.replace('/portal/login');
-          return;
-        }
+        if (err instanceof ApiError && err.status === 401) return;
         setErro(err instanceof Error ? err.message : 'Erro inesperado.');
       });
-  }, [router]);
+  }, [estado.status]);
+
+  if (estado.status === 'carregando') {
+    return (
+      <section className="max-w-4xl mx-auto px-5 py-16">
+        <div className="text-recorpo-dim animate-pulseSoft">Carregando…</div>
+      </section>
+    );
+  }
 
   return (
     <section className="max-w-4xl mx-auto px-5 py-16">
@@ -45,10 +44,7 @@ export default function PacientesListaPage() {
           </h1>
         </div>
         <button
-          onClick={() => {
-            clearToken();
-            router.push('/portal/login');
-          }}
+          onClick={() => logout()}
           className="text-sm text-recorpo-dim hover:text-recorpo-text transition-colors"
         >
           Sair

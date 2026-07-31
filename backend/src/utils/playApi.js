@@ -139,16 +139,10 @@ function _normalizar(data) {
   };
 }
 
-/** Extrai userId embutido no `obfuscatedExternalAccountId` do purchase, se houver. */
-function extrairUserIdDoRaw(raw) {
-  return raw?.externalAccountIdentifiers?.obfuscatedExternalAccountId || null;
-}
-
 module.exports = {
   playApiConfigurada,
   obterAssinatura,
   acknowledgeAssinatura,
-  extrairUserIdDoRaw,
   // Exportados para teste.
   _derivarStatus,
   _normalizar,

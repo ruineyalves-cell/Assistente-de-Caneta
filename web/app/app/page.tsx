@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from './_lib/auth-provider';
 import { useDashboardData } from './_lib/dashboard-data';
@@ -333,24 +334,24 @@ function Header({
         </div>
       </div>
       <nav className="mt-4 flex gap-1 text-sm">
-        <a
+        <Link
           href="/app"
           className="rounded-lg bg-recorpo-surfaceHi px-3 py-1.5 text-recorpo-text"
         >
           Início
-        </a>
-        <a
+        </Link>
+        <Link
           href="/app/historico"
           className="rounded-lg px-3 py-1.5 text-recorpo-dim hover:bg-recorpo-surfaceHi hover:text-recorpo-text"
         >
           Histórico
-        </a>
-        <a
+        </Link>
+        <Link
           href="/app/perfil"
           className="rounded-lg px-3 py-1.5 text-recorpo-dim hover:bg-recorpo-surfaceHi hover:text-recorpo-text"
         >
           Perfil
-        </a>
+        </Link>
       </nav>
     </header>
   );
@@ -404,9 +405,9 @@ function AcaoRapida({
   );
   if (href && !disabled) {
     return (
-      <a href={href} className={className} aria-label={titulo}>
+      <Link href={href} className={className} aria-label={titulo}>
         {conteudo}
-      </a>
+      </Link>
     );
   }
   return (

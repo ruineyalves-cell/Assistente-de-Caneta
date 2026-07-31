@@ -1,11 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ApiError, login } from '@/lib/api';
+import { usePortalAuth } from '../_lib/auth-provider';
 
 export default function PortalLoginPage() {
-  const router = useRouter();
+  const { login } = usePortalAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -16,20 +15,10 @@ export default function PortalLoginPage() {
     setErro(null);
     setEnviando(true);
     try {
-      const resposta = await login(email, senha);
-      if (resposta.usuario.role !== 'profissional') {
-        setErro(
-          'Este acesso é exclusivo de profissionais verificados. Pacientes usam o app pelo celular.'
-        );
-        return;
-      }
-      router.push('/portal/pacientes');
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setErro(err.message);
-      } else {
-        setErro('Não foi possível conectar. Tente novamente.');
-      }
+      const r = await login(email, senha);
+      if (!r.ok) setErro(r.erro ?? 'Erro ao entrar.');
+    } catch {
+      setErro('Não foi possível conectar. Tente novamente.');
     } finally {
       setEnviando(false);
     }

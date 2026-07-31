@@ -11,6 +11,7 @@ const doctor = require('../controllers/doctorController');
 const lgpd = require('../controllers/lgpdController');
 const ia = require('../controllers/iaController');
 const sub = require('../controllers/subscriptionController');
+const stripeCtrl = require('../controllers/stripeController');
 
 const r = Router();
 
@@ -74,6 +75,13 @@ r.post('/ia/bula', ...paciente, iaLimiter, audit('read', 'ia_bula'), ia.analisar
 r.post('/assinaturas/validar', requireAuth, subscriptionLimiter, audit('create', 'subscription'), sub.validar);
 r.get('/assinaturas/status', requireAuth, sub.status);
 r.post('/assinaturas/rtdn', sub.rtdn);
+
+// --- Stripe (web + iOS) ---
+// checkout: cria sessão de pagamento Stripe e devolve URL.
+// portal: redireciona pro portal de gerenciamento Stripe do cliente.
+// webhook: registrado em app.js (antes do body parser, precisa raw body).
+r.post('/stripe/checkout', requireAuth, subscriptionLimiter, audit('create', 'stripe_checkout'), stripeCtrl.checkout);
+r.post('/stripe/portal', requireAuth, stripeCtrl.portal);
 
 // --- Portal do profissional (read-only; auditoria com titular = paciente acessado) ---
 const prof = [requireAuth, requireRole('profissional')];
