@@ -368,13 +368,14 @@ class _LoginPageState extends State<LoginPage> {
       // salvou credenciais, oferecer opt-in de login rápido. Se ele
       // recusar, não pergunta de novo nesta sessão.
       await _talvezOferecerBiometria(email: email, senha: senha);
-      if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
-      );
+      // Navegação é reativa: AuthService.login() já chamou notifyListeners,
+      // e o Consumer2 em MyApp troca LoginPage → Onboarding/Dashboard
+      // sozinho. NÃO usamos Navigator.pushReplacement aqui — isso empilhava
+      // o Dashboard como rota por cima do gate reativo, o que quebrava o
+      // logout (limpar sessão reconstruía o gate embaixo, mas a rota do
+      // Dashboard continuava no topo) e fazia a biometria "piscar".
     } catch (e) {
-      setState(() => errorMessage = e.toString());
+      if (mounted) setState(() => errorMessage = e.toString());
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -397,9 +398,8 @@ class _LoginPageState extends State<LoginPage> {
         // user simplesmente digita a senha manualmente.
         return;
       }
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
-      );
+      // Sucesso: navegação reativa (Consumer2) troca a tela sozinha.
+      // Sem pushReplacement — ver comentário em _handleLogin.
     } catch (e) {
       // 401 (senha mudou) já limpou o cofre — some o botão.
       _checarBiometriaDisponivel();
@@ -475,11 +475,10 @@ class _LoginPageState extends State<LoginPage> {
         setState(() => isLoading = false);
         return;
       }
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
-      );
+      // Sucesso: navegação reativa (Consumer2) troca a tela sozinha.
+      // Sem pushReplacement — ver comentário em _handleLogin.
     } catch (e) {
-      setState(() => errorMessage = e.toString());
+      if (mounted) setState(() => errorMessage = e.toString());
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -811,6 +810,18 @@ class _LoginPageState extends State<LoginPage> {
                           corpo: AppConstants.disclaimerMedico
                               .replaceFirst('⚠️ AVISO IMPORTANTE', '')
                               .trim(),
+                        ),
+                        const SizedBox(height: 8),
+                        // Identificador do build instalado — confirma qual
+                        // versão do APK está no aparelho (evita testar build
+                        // antigo achando que é o novo).
+                        Center(
+                          child: Text(
+                            'v${AppConstants.appVersion} · build ${AppConstants.buildTag}',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade500),
+                          ),
                         ),
                         const SizedBox(height: 8),
                       ],

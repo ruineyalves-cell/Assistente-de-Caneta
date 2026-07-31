@@ -102,7 +102,8 @@ jobs:
           CI_VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee /tmp/build-apk.log || {
+          flutter build apk --release \
+            --dart-define=BUILD_TAG=${{ github.run_number }} 2>&1 | tee /tmp/build-apk.log || {
             echo "==== APK BUILD FAILED — extracting cause ===="
             ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-apk.log | head -50 | tr '\n' ' ' | cut -c1-900)
             echo "::error::${ERR}"
@@ -111,12 +112,18 @@ jobs:
 
       - name: Build AAB (Release, for Play Store)
         if: steps.keystore.outputs.signed == 'true'
+        # Não bloqueia o pipeline: se o AAB falhar (ex.: problema de
+        # assinatura), o APK que o beta testa ainda é publicado na Release.
+        # Antes, uma falha aqui pulava o "Publish to Release" e deixava um
+        # APK ANTIGO no android-latest — a pessoa baixava build velho.
+        continue-on-error: true
         working-directory: ./flutter_app
         env:
           CI_VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           set -o pipefail
-          flutter build appbundle --release 2>&1 | tee /tmp/build-aab.log || {
+          flutter build appbundle --release \
+            --dart-define=BUILD_TAG=${{ github.run_number }} 2>&1 | tee /tmp/build-aab.log || {
             echo "==== AAB BUILD FAILED — extracting cause ===="
             ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-aab.log | head -50 | tr '\n' ' ' | cut -c1-900)
             echo "::error::${ERR}"

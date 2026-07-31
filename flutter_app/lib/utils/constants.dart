@@ -26,6 +26,17 @@ class AppConstants {
       'Assistente de Caneta'; // descritor complementar
   static const String appSubtitle = 'Acompanhamento de conformidade GLP-1';
 
+  /// Identificador do build. Injetado pelo CI via
+  /// `--dart-define=BUILD_TAG=<github.run_number>`. Em build local sem
+  /// a flag, cai em 'dev'. Serve pra confirmar SEM AMBIGUIDADE qual APK
+  /// está instalado no aparelho (evita testar build antigo achando que
+  /// é o novo). Exibido no rodapé da tela de login.
+  static const String buildTag =
+      String.fromEnvironment('BUILD_TAG', defaultValue: 'dev');
+
+  /// Versão semântica exibida (espelha o `version:` do pubspec.yaml).
+  static const String appVersion = '0.1.0';
+
   // Storage keys
   static const String keyAccessToken = 'access_token';
   static const String keyRefreshToken = 'refresh_token';
