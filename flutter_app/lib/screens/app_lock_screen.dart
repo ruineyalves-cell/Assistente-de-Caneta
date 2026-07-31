@@ -54,18 +54,16 @@ class _AppLockScreenState extends State<AppLockScreen> {
   }
 
   Future<void> _adicionar(int d) async {
-    if (_pin.length >= 6) return;
+    final lock = context.read<AppLockService>();
+    final tamanhoEsperado = lock.pinLength;
+    if (_pin.length >= tamanhoEsperado) return;
     HapticFeedback.selectionClick();
     setState(() {
       _pin = _pin + d.toString();
       _erro = null;
     });
-    if (_pin.length >= 4) {
-      // Não validamos automaticamente aos 4 dígitos porque o PIN pode
-      // ter 5 ou 6. A validação acontece no botão OK ou aos 6 dígitos.
-      if (_pin.length == 6) {
-        await _tentarPin();
-      }
+    if (_pin.length == tamanhoEsperado) {
+      await _tentarPin();
     }
   }
 
@@ -150,7 +148,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     color: scheme.onSurface.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 32),
-              _Dots(preenchidos: _pin.length),
+              _Dots(preenchidos: _pin.length, total: lock.pinLength),
               const SizedBox(height: 16),
               if (tempBloqueado)
                 _AvisoBloqueio(ate: bloqAte)
@@ -168,7 +166,9 @@ class _AppLockScreenState extends State<AppLockScreen> {
                 onBiometria: lock.biometriaHabilitada && !tempBloqueado
                     ? _tentarBiometriaAutomatica
                     : null,
-                onOk: _pin.length >= 4 && !tempBloqueado ? _tentarPin : null,
+                onOk: _pin.length >= lock.pinLength && !tempBloqueado
+                    ? _tentarPin
+                    : null,
               ),
             ],
           ),
@@ -180,14 +180,15 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
 class _Dots extends StatelessWidget {
   final int preenchidos;
-  const _Dots({required this.preenchidos});
+  final int total;
+  const _Dots({required this.preenchidos, required this.total});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(6, (i) {
+      children: List.generate(total, (i) {
         final cheio = i < preenchidos;
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 6),

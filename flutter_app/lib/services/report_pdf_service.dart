@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -29,7 +30,15 @@ class ReportPdfService {
   Future<Uint8List> gerar({
     required Map<String, dynamic> exportacao,
     required EixoFarmacologico? eixoLocal,
-  }) async {
+  }) {
+    return Isolate.run(
+        () => const ReportPdfService()._gerarImpl(exportacao, eixoLocal));
+  }
+
+  Future<Uint8List> _gerarImpl(
+    Map<String, dynamic> exportacao,
+    EixoFarmacologico? eixoLocal,
+  ) async {
     final doc = pw.Document();
     final agora = DateTime.now();
     final fmtData = DateFormat('dd/MM/yyyy', 'pt_BR');

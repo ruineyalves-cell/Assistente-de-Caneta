@@ -347,8 +347,6 @@ class AuthService extends ChangeNotifier {
     await _storage.delete(key: 'user_id');
     await _storage.delete(key: 'email');
     await _storage.delete(key: 'nome');
-    await _biometric.limpar();
-
     _isLoading = false;
     notifyListeners();
 

@@ -37,6 +37,7 @@ class AppLockService extends ChangeNotifier {
   static const _keyBackgroundedEm = 'app_lock_bg_epoch_v1';
   static const _keyTentativasErradas = 'app_lock_tentativas_v1';
   static const _keyBloqueadoAte = 'app_lock_bloqueado_ate_v1';
+  static const _keyPinLength = 'app_lock_pin_length_v1';
 
   /// Timeouts pré-definidos exibidos na tela de setup.
   static const List<int> timeoutsDisponiveisSeg = [0, 60, 300, 900];
@@ -45,6 +46,7 @@ class AppLockService extends ChangeNotifier {
   bool _travado = false;
   bool _biometriaHabilitada = false;
   int _timeoutSeg = 300; // 5 min default
+  int _pinLength = 6;
 
   AppLockService._(this._secure, this._auth, this._prefs);
 
@@ -65,6 +67,7 @@ class AppLockService extends ChangeNotifier {
   bool get travado => _travado;
   bool get biometriaHabilitada => _biometriaHabilitada;
   int get timeoutSeg => _timeoutSeg;
+  int get pinLength => _pinLength;
   bool get suportado => !kIsWeb;
 
   Future<void> _carregar() async {
@@ -72,6 +75,7 @@ class AppLockService extends ChangeNotifier {
     _configurado = hash != null && hash.isNotEmpty;
     _biometriaHabilitada = _prefs.getBool(_keyBiometriaOn) ?? false;
     _timeoutSeg = _prefs.getInt(_keyTimeoutSeg) ?? 300;
+    _pinLength = _prefs.getInt(_keyPinLength) ?? 6;
     // No boot, se há PIN configurado o app começa travado.
     _travado = _configurado;
   }
@@ -93,8 +97,10 @@ class AppLockService extends ChangeNotifier {
     final hash = _hashPin(pin, salt);
     await _secure.write(key: _keyHash, value: hash);
     await _secure.write(key: _keySalt, value: salt);
+    await _prefs.setInt(_keyPinLength, pin.length);
     await _prefs.remove(_keyTentativasErradas);
     await _prefs.remove(_keyBloqueadoAte);
+    _pinLength = pin.length;
     _configurado = true;
     _travado = false;
     notifyListeners();
