@@ -1779,6 +1779,32 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Abre o seletor "Registrar com IA" — bottom sheet com os 4 tipos de
+  /// registro por câmera (prato/refeição, rótulo, bula, prescrição).
+  /// Reusa `_ScannersRow` sem duplicar a lógica de captura/OCR/Gemini.
+  void _abrirRegistroIaSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Registrar com IA',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text('A IA lê a foto e organiza o registro pra você.',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+            const SizedBox(height: 16),
+            _ScannersRow(),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<LogsProvider>(
@@ -1948,39 +1974,21 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Expanded(
-                      child: Consumer<PremiumService>(
-                        builder: (ctx, premium, _) => FutureBuilder<int?>(
-                          future: FeatureUsageService().restante(
-                              Feature.cameraRefeicao,
-                              premium: premium.isPremium),
-                          builder: (ctx, snap) {
-                            final restante = snap.data;
-                            String rodape;
-                            if (premium.isPremium) {
-                              rodape = 'Toque para escanear';
-                            } else if (restante == null) {
-                              rodape = 'Toque para escanear';
-                            } else if (restante == 0) {
-                              rodape = 'Grátis usado · toque';
-                            } else {
-                              rodape =
-                                  'Grátis: $restante ${restante == 1 ? "restante" : "restantes"}';
-                            }
-                            return EixoCard(
-                              eixo: EixoRecorpo.refeicao,
-                              titulo: 'Refeições',
-                              valor:
-                                  refeicoesHoje == 0 ? '—' : '$refeicoesHoje',
-                              subtitulo: refeicoesHoje == 0
-                                  ? 'Nenhuma hoje'
-                                  : refeicoesHoje == 1
-                                      ? '1 registrada hoje'
-                                      : '$refeicoesHoje registradas hoje',
-                              rodape: rodape,
-                              onTap: () => abrirFluxoRefeicao(context),
-                            );
-                          },
-                        ),
+                      // Card unificado "Registro IA": abre o seletor com os
+                      // 4 tipos de registro por câmera (prato, rótulo, bula,
+                      // prescrição). A contagem reflete só REFEIÇÕES do dia —
+                      // rótulo/bula/prescrição são informativos e não contam.
+                      child: EixoCard(
+                        eixo: EixoRecorpo.refeicao,
+                        titulo: 'Registro IA',
+                        valor: refeicoesHoje == 0 ? '—' : '$refeicoesHoje',
+                        subtitulo: refeicoesHoje == 0
+                            ? 'Nenhuma refeição hoje'
+                            : refeicoesHoje == 1
+                                ? '1 refeição hoje'
+                                : '$refeicoesHoje refeições hoje',
+                        rodape: 'Prato · rótulo · bula · receita',
+                        onTap: () => _abrirRegistroIaSheet(context),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2077,22 +2085,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Ferramentas de registro por câmera — diferenciais do app
-                // (Refeição, Rótulo, Bula, Prescrição). Ficam visíveis como
-                // parte do registro diário, fora do bloco de analytics.
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text(
-                    'Registrar com a câmera',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade700,
-                        letterSpacing: 0.3),
-                  ),
-                ),
-                _ScannersRow(),
                 const SizedBox(height: 20),
                 // Progresso e ferramentas — recolhido por padrão (Fase 4:
                 // declutter). Mantém a Home no "hoje"; composição, macros,
