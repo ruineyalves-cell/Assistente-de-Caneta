@@ -1352,6 +1352,11 @@ class _HomePageState extends State<HomePage> {
   PerfilBackend? _perfil;
   bool _contextoCarregado = false;
 
+  // Fase 4 (declutter): a cauda de analytics/ferramentas (composição,
+  // macros, esforço, scanners, gráfico de 28 dias) fica recolhida por
+  // padrão — a Home foca no "hoje". O usuário expande sob demanda.
+  bool _mostrarProgresso = false;
+
   // Lote 30 — Estado do lembrete semanal da dose.
   bool _lembreteDoseHabilitado = false;
   int _lembreteDoseWeekday = DateTime.thursday;
@@ -2073,42 +2078,60 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // 6) Dados de composição
-                RecompositionCard(
-                  pesoAtualKg: pesoAtual,
-                  pesoAnteriorKg: pesoAnterior,
-                ),
-                const SizedBox(height: 16),
-                // 7) Macros
-                MacrosCard(
-                  metaProteinaG: metaProteinaG,
-                  metaAguaMl: metaAguaMl,
-                  consumidoProteinaG: consumidoProteinaG,
-                  consumidoAguaMl: consumidoAguaMl,
-                ),
-                const SizedBox(height: 16),
-                // 8) Ajuste de esforço
-                EffortPreviewCard(
-                  eixo: _eixo,
-                  onAbrir: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const EffortScreen()),
+                // Progresso e ferramentas — recolhido por padrão (Fase 4:
+                // declutter). Mantém a Home no "hoje"; composição, macros,
+                // esforço, scanners e o gráfico de 28 dias abrem sob demanda.
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(
+                        () => _mostrarProgresso = !_mostrarProgresso),
+                    icon: Icon(_mostrarProgresso
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded),
+                    label: Text(_mostrarProgresso
+                        ? 'Ocultar progresso e ferramentas'
+                        : 'Ver progresso e ferramentas'),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // 9) Scanners (ferramentas mais avançadas)
-                _ScannersRow(),
-                const SizedBox(height: 16),
-                // 10) Análise longa — gráfico de 28 dias
-                if (logsProvider.scores.isNotEmpty)
-                  MetricChart(
-                    scores: logsProvider.scores
-                        .take(28)
-                        .map((s) => s.score)
-                        .toList(),
-                    title: 'Scores últimos 28 dias',
-                    subtitle:
-                        'Progressão de conformidade (proteína, hidratação, registro)',
+                if (_mostrarProgresso) ...[
+                  const SizedBox(height: 8),
+                  // Dados de composição
+                  RecompositionCard(
+                    pesoAtualKg: pesoAtual,
+                    pesoAnteriorKg: pesoAnterior,
                   ),
+                  const SizedBox(height: 16),
+                  // Macros
+                  MacrosCard(
+                    metaProteinaG: metaProteinaG,
+                    metaAguaMl: metaAguaMl,
+                    consumidoProteinaG: consumidoProteinaG,
+                    consumidoAguaMl: consumidoAguaMl,
+                  ),
+                  const SizedBox(height: 16),
+                  // Ajuste de esforço
+                  EffortPreviewCard(
+                    eixo: _eixo,
+                    onAbrir: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const EffortScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Scanners (ferramentas mais avançadas)
+                  _ScannersRow(),
+                  const SizedBox(height: 16),
+                  // Análise longa — gráfico de 28 dias
+                  if (logsProvider.scores.isNotEmpty)
+                    MetricChart(
+                      scores: logsProvider.scores
+                          .take(28)
+                          .map((s) => s.score)
+                          .toList(),
+                      title: 'Scores últimos 28 dias',
+                      subtitle:
+                          'Progressão de conformidade (proteína, hidratação, registro)',
+                    ),
+                ],
               ],
             ),
           ),
