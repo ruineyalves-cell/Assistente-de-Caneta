@@ -1,6 +1,19 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/error_codes.dart' as auth_error;
 import 'package:local_auth/local_auth.dart';
+
+/// Erro de biometria que DEVE virar mensagem pro usuário (não um "pisca"
+/// silencioso). Cancelamento pelo usuário NÃO gera esta exceção — some
+/// só quando há uma condição real (hardware ausente, digital bloqueada,
+/// activity errada). [mensagem] já vem pronta pra exibir em SnackBar.
+class BiometriaIndisponivelException implements Exception {
+  final String mensagem;
+  BiometriaIndisponivelException(this.mensagem);
+  @override
+  String toString() => mensagem;
+}
 
 /// Login rápido via biometria (digital/face).
 ///
@@ -100,21 +113,51 @@ class BiometricLoginService {
     String razao = 'Entrar no Recorpo',
   }) async {
     if (!suportado) return null;
+    bool ok;
     try {
-      final ok = await _auth.authenticate(
+      ok = await _auth.authenticate(
         localizedReason: razao,
         options: const AuthenticationOptions(
           biometricOnly: true,
           stickyAuth: true,
         ),
       );
-      if (!ok) return null;
-      final email = await _storage.read(key: _kEmail);
-      final senha = await _storage.read(key: _kSenha);
-      if (email == null || senha == null) return null;
-      return (email: email, senha: senha);
-    } catch (_) {
-      return null;
+    } on PlatformException catch (e) {
+      // Traduz os códigos do local_auth em mensagens acionáveis. Sem isto,
+      // qualquer falha real (activity errada, digital bloqueada, hardware
+      // sem cadastro) resolvia como null e a tela só "piscava".
+      throw BiometriaIndisponivelException(_mensagemDoErro(e));
+    }
+    // Usuário cancelou / falhou o toque: sem exceção, sem mensagem — ele
+    // simplesmente digita a senha.
+    if (!ok) return null;
+    final email = await _storage.read(key: _kEmail);
+    final senha = await _storage.read(key: _kSenha);
+    if (email == null || senha == null) return null;
+    return (email: email, senha: senha);
+  }
+
+  String _mensagemDoErro(PlatformException e) {
+    switch (e.code) {
+      case auth_error.notAvailable:
+        return 'Biometria indisponível neste aparelho. Entre com email e senha.';
+      case auth_error.notEnrolled:
+        return 'Nenhuma digital/face cadastrada no aparelho. Cadastre nas '
+            'configurações do Android ou entre com email e senha.';
+      case auth_error.lockedOut:
+        return 'Muitas tentativas. Aguarde alguns segundos e tente de novo, '
+            'ou entre com email e senha.';
+      case auth_error.permanentlyLockedOut:
+        return 'Biometria bloqueada. Desbloqueie o aparelho com o PIN/padrão '
+            'e depois entre com email e senha.';
+      case auth_error.passcodeNotSet:
+        return 'Configure um bloqueio de tela no Android para usar a '
+            'biometria. Por ora, entre com email e senha.';
+      default:
+        // Inclui "no_fragment_activity" — não deveria mais ocorrer após o
+        // fix da MainActivity, mas se voltar, aparece explícito.
+        return 'Não foi possível usar a biometria (${e.code}). Entre com '
+            'email e senha.';
     }
   }
 

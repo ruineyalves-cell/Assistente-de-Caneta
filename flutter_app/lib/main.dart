@@ -311,7 +311,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checarBiometriaDisponivel();
+    _checarBiometriaDisponivel(autoDisparar: true);
     // Se caímos aqui porque o backend invalidou a sessão (rotação de
     // JWT_SECRET, refresh reusado, revogado), o AuthService marca a flag.
     // Mostramos SnackBar amigável em vez de deixar o usuário sem contexto.
@@ -330,14 +330,17 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
-  Future<void> _checarBiometriaDisponivel() async {
+  /// Reavalia se o botão de biometria deve aparecer. [autoDisparar] só é
+  /// true no boot da tela — nunca a partir de um catch, pra não criar
+  /// loop de prompts quando a biometria falha por um motivo persistente.
+  Future<void> _checarBiometriaDisponivel({bool autoDisparar = false}) async {
     final auth = context.read<AuthService>();
     final disponivel = await auth.biometric.biometriaDisponivel();
     final temSalvo = await auth.biometric.temCredenciaisSalvas();
     if (!mounted) return;
     final ativo = disponivel && temSalvo;
     setState(() => _mostrarBotaoBiometria = ativo);
-    if (ativo) _handleLoginBiometrico();
+    if (ativo && autoDisparar) _handleLoginBiometrico();
   }
 
   @override
@@ -401,7 +404,9 @@ class _LoginPageState extends State<LoginPage> {
       // Sucesso: navegação reativa (Consumer2) troca a tela sozinha.
       // Sem pushReplacement — ver comentário em _handleLogin.
     } catch (e) {
-      // 401 (senha mudou) já limpou o cofre — some o botão.
+      // Reavalia a visibilidade do botão SEM auto-disparar de novo (evita
+      // loop de prompts quando a falha é persistente). No caso 401 o cofre
+      // já foi limpo e o botão some; nos demais, mostra a mensagem.
       _checarBiometriaDisponivel();
       setState(() => errorMessage = e.toString());
     } finally {

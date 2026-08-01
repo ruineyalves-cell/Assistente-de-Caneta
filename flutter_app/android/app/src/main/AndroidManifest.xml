@@ -2,6 +2,12 @@
     <!-- Rede (backend Recorpo) -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Login rápido por digital/face (local_auth). USE_BIOMETRIC cobre
+         Android 9+ (API 28); USE_FINGERPRINT é o fallback pra API 23-27.
+         Sem isso, authenticate() falha e o login biométrico não abre. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+
     <!-- Câmera para o scanner de refeição (Lote 9) e OCR de prescrição
          (Lote 10). image_picker também aciona a captura. -->
     <uses-permission android:name="android.permission.CAMERA"/>
