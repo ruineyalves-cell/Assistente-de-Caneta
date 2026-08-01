@@ -1,5 +1,4 @@
 import 'dart:async' show unawaited;
-import 'dart:convert' show jsonDecode;
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -34,6 +33,7 @@ import 'services/notification_service.dart';
 import 'services/health_connect_service.dart';
 import 'screens/health_hub_screen.dart';
 import 'screens/home/home_consistencia_row.dart';
+import 'screens/home/home_peso_sintomas_row.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -41,7 +41,6 @@ import 'screens/meal_result_screen.dart';
 import 'widgets/eixo_card.dart';
 import 'widgets/symptoms_sheet.dart';
 import 'widgets/water_quick_sheet.dart';
-import 'widgets/weight_quick_sheet.dart';
 import 'screens/effort_screen.dart';
 import 'screens/pre_consulta_screen.dart';
 import 'screens/report_screen.dart';
@@ -1785,8 +1784,10 @@ class _HomePageState extends State<HomePage> {
           return const DashboardSkeleton();
         }
 
-        // Peso mais recente reportado nos logs (topo da lista, se ordenada
-        // por data desc). O comparador anterior é o segundo com peso.
+        // Peso mais recente reportado nos logs (topo da lista, ordenada por
+        // data desc). `pesoAtual`/`pesoAnterior` alimentam metas, banner de
+        // importar peso e o RecompositionCard; o card de Peso da grade (com
+        // delta) vive agora em HomePesoSintomasRow.
         final logsComPeso =
             logsProvider.logs.where((l) => l.pesoKg != null).toList();
         final pesoAtual =
@@ -1838,20 +1839,6 @@ class _HomePageState extends State<HomePage> {
             .where((l) =>
                 (l.alimentos as String?)?.trim().isNotEmpty ?? false)
             .length;
-        var sintomasHoje = 0;
-        for (final l in logsDeHoje) {
-          final efeitos = l.efeitosColaterais as String?;
-          if (efeitos == null || efeitos.isEmpty) continue;
-          try {
-            final j = jsonDecode(efeitos);
-            if (j is Map && j['sintomas'] is List) {
-              sintomasHoje += (j['sintomas'] as List).length;
-            }
-          } catch (_) {}
-        }
-        final deltaPeso = (pesoAtual != null && pesoAnterior != null)
-            ? pesoAtual - pesoAnterior
-            : null;
         final aguaPct = (metaAguaMl != null && metaAguaMl > 0)
             ? (consumidoAguaMl / metaAguaMl * 100).clamp(0, 999).round()
             : null;
@@ -2013,46 +2000,9 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: EixoCard(
-                        eixo: EixoRecorpo.peso,
-                        titulo: 'Peso',
-                        valor: pesoAtual == null
-                            ? '—'
-                            : pesoAtual.toStringAsFixed(1),
-                        subtitulo: pesoAtual == null
-                            ? 'Sem registro'
-                            : deltaPeso == null
-                                ? 'kg (primeiro registro)'
-                                : deltaPeso < 0
-                                    ? 'kg · ${deltaPeso.toStringAsFixed(1)} vs último'
-                                    : 'kg · +${deltaPeso.toStringAsFixed(1)} vs último',
-                        rodape: 'Toque para registrar',
-                        onTap: () => mostrarWeightQuickSheet(
-                          context,
-                          pesoAnteriorKg: pesoAtual,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: EixoCard(
-                        eixo: EixoRecorpo.sintomas,
-                        titulo: 'Sintomas',
-                        valor: sintomasHoje == 0 ? 'OK' : '$sintomasHoje',
-                        subtitulo: sintomasHoje == 0
-                            ? 'Nada registrado hoje'
-                            : sintomasHoje == 1
-                                ? '1 registrado hoje'
-                                : '$sintomasHoje registrados hoje',
-                        rodape: 'Como você está?',
-                        onTap: () => abrirSymptomsSheet(context),
-                      ),
-                    ),
-                  ],
-                ),
+                // Fase 3: peso + sintomas extraídos pra HomePesoSintomasRow
+                // (const + Selector + RepaintBoundary). Derivam só de logs.
+                const HomePesoSintomasRow(),
                 // Lote 32.1 — 3ª linha só quando o Health Connect estiver
                 // com dados. Sem push tributário: usuário sem relógio nem
                 // percebe que existe (limpa o dashboard).
