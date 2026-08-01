@@ -2077,6 +2077,22 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Ferramentas de registro por câmera — diferenciais do app
+                // (Refeição, Rótulo, Bula, Prescrição). Ficam visíveis como
+                // parte do registro diário, fora do bloco de analytics.
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Registrar com a câmera',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade700,
+                        letterSpacing: 0.3),
+                  ),
+                ),
+                _ScannersRow(),
                 const SizedBox(height: 20),
                 // Progresso e ferramentas — recolhido por padrão (Fase 4:
                 // declutter). Mantém a Home no "hoje"; composição, macros,
@@ -2116,9 +2132,6 @@ class _HomePageState extends State<HomePage> {
                       MaterialPageRoute(builder: (_) => const EffortScreen()),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Scanners (ferramentas mais avançadas)
-                  _ScannersRow(),
                   const SizedBox(height: 16),
                   // Análise longa — gráfico de 28 dias
                   if (logsProvider.scores.isNotEmpty)
