@@ -117,11 +117,37 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Center(
-                      child: AspectRatio(
-                        aspectRatio: c.value.aspectRatio,
-                        child: CameraPreview(c),
-                      ),
+                    // Preview em tela cheia (estilo câmera nativa). Antes
+                    // usávamos AspectRatio(c.value.aspectRatio), mas esse
+                    // valor vem em PAISAGEM — em pé virava uma faixa fina
+                    // no meio da tela, dificultando o enquadramento. Aqui,
+                    // um FittedBox(cover) sobre o previewSize (com largura/
+                    // altura trocadas em portrait) preenche a área toda e
+                    // recorta o excedente, em qualquer orientação.
+                    Builder(
+                      builder: (context) {
+                        final preview = c.value.previewSize;
+                        if (preview == null) return CameraPreview(c);
+                        final isPortrait =
+                            MediaQuery.of(context).orientation ==
+                                Orientation.portrait;
+                        final w =
+                            isPortrait ? preview.height : preview.width;
+                        final h =
+                            isPortrait ? preview.width : preview.height;
+                        return ClipRect(
+                          child: SizedBox.expand(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: w,
+                                height: h,
+                                child: CameraPreview(c),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     // Guia visual centralizada — só decoração para
                     // ajudar o usuário a enquadrar o prato.

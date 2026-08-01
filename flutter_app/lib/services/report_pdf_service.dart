@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -28,24 +27,27 @@ import '../models/symptom.dart';
 class ReportPdfService {
   const ReportPdfService();
 
+  /// Gera o PDF na thread PRINCIPAL (não em isolate).
+  ///
+  /// Histórico: já foi via `Isolate.run` pra evitar ANR, mas isso causava
+  /// o relatório "girar pra sempre" (o isolate podia não completar). Como
+  /// esta geração é rápida (< 1s pra ~14 dias) e a tela do relatório já
+  /// exibe um spinner próprio, rodar no isolate principal é seguro e
+  /// elimina o travamento. `initializeDateFormatting` é idempotente —
+  /// garante o locale pt_BR do DateFormat mesmo que o boot não tenha
+  /// inicializado ainda.
   Future<Uint8List> gerar({
     required Map<String, dynamic> exportacao,
     required EixoFarmacologico? eixoLocal,
-  }) {
-    return Isolate.run(
-        () => const ReportPdfService()._gerarImpl(exportacao, eixoLocal));
+  }) async {
+    await initializeDateFormatting('pt_BR', null);
+    return _gerarImpl(exportacao, eixoLocal);
   }
 
   Future<Uint8List> _gerarImpl(
     Map<String, dynamic> exportacao,
     EixoFarmacologico? eixoLocal,
   ) async {
-    // Isolate.run roda num isolate NOVO, sem os dados de locale que o
-    // isolate principal já inicializou no boot. Sem esta linha, o
-    // DateFormat('dd/MM/yyyy', 'pt_BR') lança LocaleDataException e o
-    // relatório falha com "tentar novamente". Inicializa aqui dentro.
-    await initializeDateFormatting('pt_BR', null);
-
     final doc = pw.Document();
     final agora = DateTime.now();
     final fmtData = DateFormat('dd/MM/yyyy', 'pt_BR');

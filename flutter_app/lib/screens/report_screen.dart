@@ -51,7 +51,12 @@ class _ReportScreenState extends State<ReportScreen> {
               .cast<EixoFarmacologico?>()
               .firstWhere((v) => v?.name == nomeEixo, orElse: () => null);
 
-      final exportacao = await auth.apiService.exportarDadosLgpd();
+      final exportacao = await auth.apiService.exportarDadosLgpd().timeout(
+        const Duration(seconds: 40),
+        onTimeout: () => throw Exception(
+            'O servidor demorou a responder. Verifique sua conexão e '
+            'toque em "Tentar de novo".'),
+      );
       final bytes = await _service.gerar(
         exportacao: exportacao,
         eixoLocal: eixo,

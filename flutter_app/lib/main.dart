@@ -1811,7 +1811,11 @@ class _HomePageState extends State<HomePage> {
                 // 2) Lote 32.3 — Resumo diário do backend, com fallback
                 //    para a antiga dica local se o backend não respondeu.
                 _resumoDiario != null
-                    ? _ResumoDoDiaCard(resumo: _resumoDiario!)
+                    ? _ResumoDoDiaCard(
+                        resumo: _resumoDiario!,
+                        aguaHojeMl: consumidoAguaMl,
+                        metaAguaMl: metaAguaMl,
+                      )
                     : _DicaDoDiaHumana(genero: _genero),
                 const SizedBox(height: 16),
                 // 3) Foco do dia (Blindagem Muscular + eixo)
@@ -2149,7 +2153,41 @@ class _SaudacaoHumana extends StatelessWidget {
 /// pendentes.
 class _ResumoDoDiaCard extends StatelessWidget {
   final Map<String, dynamic> resumo;
-  const _ResumoDoDiaCard({required this.resumo});
+  // Água de hoje + meta, calculadas localmente (mesma fonte do card
+  // "Água"). Usadas pra reescrever a linha de hidratação do resumo e
+  // manter os dois cards SEMPRE coerentes.
+  final double? aguaHojeMl;
+  final double? metaAguaMl;
+  const _ResumoDoDiaCard({
+    required this.resumo,
+    this.aguaHojeMl,
+    this.metaAguaMl,
+  });
+
+  static String _fmtL(double ml) =>
+      (ml / 1000).toStringAsFixed(1).replaceAll('.', ',');
+
+  /// Texto final da linha. Para `tipo == 'agua'`, recomputa localmente
+  /// pra bater com o card "Água" (que lê os logs otimistas). Sem isto,
+  /// o resumo do backend ficava preso no valor do boot e divergia
+  /// (ex.: "0,0 L" no resumo vs "3,8 L" no card). Demais tipos usam o
+  /// texto do servidor.
+  String _textoLinha(String tipo, String textoServidor) {
+    if (tipo == 'agua' &&
+        aguaHojeMl != null &&
+        metaAguaMl != null &&
+        metaAguaMl! > 0) {
+      final consumido = aguaHojeMl!;
+      final meta = metaAguaMl!;
+      if (consumido >= meta) {
+        return 'Meta de hidratação batida: '
+            '${_fmtL(consumido)} L de ${_fmtL(meta)} L.';
+      }
+      return 'Faltam ${_fmtL(meta - consumido)} L para bater a meta de '
+          'hidratação (${_fmtL(consumido)} L de ${_fmtL(meta)} L).';
+    }
+    return textoServidor;
+  }
 
   static Color _corPorTipo(String tipo) {
     switch (tipo) {
@@ -2224,7 +2262,7 @@ class _ResumoDoDiaCard extends StatelessWidget {
           const SizedBox(height: 8),
           ...linhas.map((l) {
             final tipo = (l['tipo'] as String?) ?? 'dica';
-            final texto = (l['texto'] as String?) ?? '';
+            final texto = _textoLinha(tipo, (l['texto'] as String?) ?? '');
             final cor = _corPorTipo(tipo);
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
