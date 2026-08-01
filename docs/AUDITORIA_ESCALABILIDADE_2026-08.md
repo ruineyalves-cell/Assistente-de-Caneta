@@ -63,9 +63,19 @@ Itens do checklist sobre "rotação de token do D1", "rate limit do D1" e "isola
 - [ ] Criar projeto **Sentry Flutter** e adicionar o secret **`SENTRY_DSN_FLUTTER`** no GitHub (Settings → Secrets → Actions). Sem ele, o APK builda mas o Sentry fica desligado.
 - [ ] (Opcional) Ligar tracing no backend: hoje `tracesSampleRate: 0` em `logger.js`. Subir pra ~0.1 quando quiser trace ponta-a-ponta app↔API.
 
-## 5. Fase 2 — resiliência de deploy (próxima)
+## 5. Fase 2 — resiliência de deploy — implementado (2026-08-01)
 
-- Migration `006_schema_migrations.sql`: cria tabela-ledger **e faz backfill** de `001`–`005` como já aplicadas (senão o boot tenta re-rodar as antigas e recai no `42501`). `server.js` passa a checar o ledger antes de rodar cada `.sql`. Resultado: migration nova que falhe por OWNER vira **erro visível**, não skip silencioso.
+Ledger de migrations (`schema_migrations`) substitui o "adivinhar via IF NOT EXISTS + tolerância a erro".
+
+| Mudança | Arquivos |
+|---|---|
+| Runner extraído pra módulo injetável e **testável** (recebe `db`/`logger`/`capturarAviso`/`dir`). Cria a tabela `schema_migrations` no próprio runner (não como arquivo de migration → evita ovo-e-galinha). Checa o ledger antes de rodar cada `.sql`; registra só em sucesso. | `backend/src/config/migrator.js` (novo), `backend/src/server.js` |
+| **Backfill automático** na 1ª introdução: ledger vazio + tabela base `users` existe → marca todas as migrations atuais como aplicadas **sem executar** (evita re-rodar ALTER antiga e cair no `42501`). Banco novo (sem `users`) roda tudo. | idem |
+| 5 testes: banco novo, banco estabelecido (backfill), boot seguinte, migration nova com `42501` (alerta + não registra → re-tentável), erro não-`42501` fatal. | `backend/tests/migrator.test.js` (novo) |
+
+**Resultado:** migration nova que falhe por OWNER **não** é registrada → continua re-tentável e dispara `migration_skip_permission` no Sentry a cada boot. Deixa de ser skip silencioso.
+
+**Verificação:** `npm test` = 122/122 (5 novos). Em produção, no 1º boot pós-deploy, esperar o log `evento: migration_backfill` uma vez; nos seguintes, os arquivos aparecem como `migration_skip_ledger` (nível debug).
 
 ## 6. Fase 3 — fundação de performance da UI (antes do redesign)
 

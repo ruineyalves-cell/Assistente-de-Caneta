@@ -1,71 +1,17 @@
 require('dotenv').config();
-const fs = require('node:fs');
 const path = require('node:path');
 const app = require('./app');
 const db = require('./config/db');
 const { logger, capturarErro, capturarAviso } = require('./utils/logger');
+const { aplicarMigrationsPendentes } = require('./config/migrator');
 
 const PORT = Number(process.env.PORT) || 3000;
 
-/**
- * Aplica database/migrations/*.sql em ordem alfabética. Idempotente —
- * todas as migrations devem usar IF NOT EXISTS. Roda na subida do
- * servidor pra evitar "precisa rodar npm run migrate manualmente no
- * Render" toda vez que uma coluna nova é adicionada.
- *
- * Tolerância a permissão: quando trocamos o role da app (ex.: rotação
- * de credencial pra novo user com GRANT mas sem OWNER), ALTER TABLE
- * das migrations antigas passa a devolver 42501 "must be owner". Como
- * o schema alvo dessas migrations já existe (foi aplicado pelo owner
- * original), tratamos 42501 como no-op com WARN — o servidor continua
- * subindo. Erros de outra natureza continuam sendo fatais.
- */
-async function aplicarMigrationsPendentes() {
-  const dir = path.join(__dirname, '..', '..', 'database', 'migrations');
-  if (!fs.existsSync(dir)) return;
-  const arquivos = fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-  for (const f of arquivos) {
-    try {
-      await db.query(fs.readFileSync(path.join(dir, f), 'utf8'));
-      logger.info({ evento: 'migration_ok', arquivo: f }, `migration ${f} aplicada`);
-    } catch (err) {
-      // 42501 = insufficient_privilege.
-      // Contexto: quando a app troca de role (rotação de credencial pra
-      // novo user com GRANT mas sem OWNER), ALTER TABLE das migrations
-      // antigas passa a devolver 42501. Como o schema alvo dessas
-      // migrations JÁ EXISTE (foi aplicado pelo owner original), skip
-      // com WARN — o servidor continua subindo em vez de crashar.
-      //
-      // ATENÇÃO: se a migration é NOVA (schema ainda não aplicado), esse
-      // skip esconde o problema — o CREATE TABLE não vai rodar e a rota
-      // que depende da tabela vai falhar em runtime com "relation does
-      // not exist". A mensagem WARN abaixo é grep-able pra detectar isso
-      // em logs. Fix definitivo: rodar a migration com role owner (via
-      // psql direto no Render Shell ou fazendo REASSIGN OWNED).
-      if (err && err.code === '42501') {
-        // capturarAviso (não logger.warn): manda pro Sentry como
-        // 'warning' pra disparar alerta. Uma migration NOVA pulada aqui
-        // é uma bomba-relógio (rota quebra em runtime); não pode ficar
-        // enterrada só no log.
-        capturarAviso(`migration ${f} ignorada por falta de OWNER`, {
-          evento: 'migration_skip_permission',
-          arquivo: f,
-          msg: err.message,
-          atencao: 'Se esta é uma migration NOVA, rode manualmente como owner. Boot continua.',
-        });
-        continue;
-      }
-      logger.error({ evento: 'migration_falha', arquivo: f, err }, `migration ${f} falhou`);
-      throw err;
-    }
-  }
-}
+// Pasta das migrations, resolvida a partir da raiz do repo.
+const MIGRATIONS_DIR = path.join(__dirname, '..', '..', 'database', 'migrations');
 
 async function main() {
-  await aplicarMigrationsPendentes();
+  await aplicarMigrationsPendentes({ db, logger, capturarAviso, dir: MIGRATIONS_DIR });
 
 
   // Job de purga LGPD: elimina definitivamente contas com purge_after vencido.
