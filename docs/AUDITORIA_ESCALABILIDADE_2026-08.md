@@ -79,7 +79,17 @@ Ledger de migrations (`schema_migrations`) substitui o "adivinhar via IF NOT EXI
 
 ## 6. Fase 3 — fundação de performance da UI (antes do redesign)
 
-Decompor `DashboardPage` de `main.dart` em widgets por card (mover pra `lib/screens/home/`), `const` + `RepaintBoundary` nos cards que animam, e `Selector<LogsProvider, T>` no lugar do `Consumer` amplo. Critério: encher a barra de água reconstrói **só** o card da água (verificar no Flutter DevTools).
+Decompor `DashboardPage` de `main.dart` em widgets por card (mover pra `lib/screens/home/`), `const` + `RepaintBoundary` nos cards, e `Selector<LogsProvider, T>` no lugar do `Consumer` amplo.
+
+### Fatia piloto entregue (2026-08-01) — padrão de referência
+
+- `lib/screens/home/home_consistencia_row.dart` (novo): extrai a linha **streak + score** do `Consumer<LogsProvider>` gigante. Usa as 3 técnicas combinadas: widget `const` (corta o cascade de rebuild do pai) + `Selector<LogsProvider,int>` por card (só reconstrói quando o próprio número muda) + `RepaintBoundary`.
+- `main.dart`: bloco inline (17 linhas) → `const HomeConsistenciaRow()`; imports órfãos de `StreakBadge`/`ScoreCard` removidos.
+- Verificação estática: `flutter analyze` do projeto = **0 erros / 0 warnings** (50 infos pré-existentes).
+
+**VALIDAÇÃO NO S25 (você):** abrir a Home com o Flutter DevTools → aba *Performance* / *Rebuild counts*. Encher a barra de água (dispara `notifyListeners`) e confirmar que **streak e score NÃO aparecem no rebuild** (só o que mudou). Se confirmar, eu replico o mesmo padrão nos outros cards (água, peso, sintomas, refeições) — que hoje ainda estão dentro do Consumer amplo.
+
+**Critério final da fase:** encher a água reconstrói só o card de água; hero a 60fps em aparelho antigo.
 
 ## 7. Backlog gated em escala — NÃO fazer agora
 

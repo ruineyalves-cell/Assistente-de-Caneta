@@ -22,8 +22,6 @@ import 'services/theme_controller.dart';
 import 'utils/theme.dart';
 import 'widgets/dashboard_skeleton.dart';
 import 'widgets/quota_exceeded_sheet.dart';
-import 'widgets/score_card.dart';
-import 'widgets/streak_badge.dart';
 import 'widgets/metric_chart.dart';
 import 'widgets/recomposition_card.dart';
 import 'widgets/macros_card.dart';
@@ -35,6 +33,7 @@ import 'services/water_widget_service.dart';
 import 'services/notification_service.dart';
 import 'services/health_connect_service.dart';
 import 'screens/health_hub_screen.dart';
+import 'screens/home/home_consistencia_row.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -2092,24 +2091,12 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                // 5) Consistência — streak + score
-                Row(
-                  children: [
-                    Expanded(
-                      child: StreakBadge(
-                        days: logsProvider.streak,
-                        title: 'Streak',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ScoreCard(
-                        score: logsProvider.scoreToday,
-                        label: 'Score hoje',
-                      ),
-                    ),
-                  ],
-                ),
+                // 5) Consistência — streak + score.
+                // Fase 3 (piloto): extraído pra HomeConsistenciaRow —
+                // const + Selector + RepaintBoundary. Não reconstrói quando
+                // outros campos do LogsProvider mudam (ex.: água). Ver o
+                // cabeçalho de home_consistencia_row.dart pro padrão.
+                const HomeConsistenciaRow(),
                 const SizedBox(height: 20),
                 // 5) CTA principal — Registrar de hoje sobe pra posição
                 //    de destaque (era no fim; agora vem antes dos dados)
