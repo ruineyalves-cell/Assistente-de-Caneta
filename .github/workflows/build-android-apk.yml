@@ -111,6 +111,26 @@ jobs:
             exit 1
           }
 
+      - name: Build APK (Profile — DevTools / rebuild counts)
+        # Profile mantém o serviço de VM (ao contrário do release), então
+        # dá pra conectar o DevTools via `flutter attach` e medir rebuilds
+        # num aparelho físico SEM precisar buildar localmente (Gradle local
+        # bloqueado pelo Warsaw). Não bloqueia o pipeline se falhar.
+        continue-on-error: true
+        working-directory: ./flutter_app
+        env:
+          CI_VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -o pipefail
+          flutter build apk --profile \
+            --dart-define=BUILD_TAG=${{ github.run_number }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_FLUTTER }} 2>&1 | tee /tmp/build-apk-profile.log || {
+            echo "==== PROFILE APK BUILD FAILED ===="
+            ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-apk-profile.log | head -50 | tr '\n' ' ' | cut -c1-900)
+            echo "::warning::${ERR}"
+            exit 1
+          }
+
       - name: Build AAB (Release, for Play Store)
         if: steps.keystore.outputs.signed == 'true'
         # Não bloqueia o pipeline: se o AAB falhar (ex.: problema de
@@ -139,6 +159,14 @@ jobs:
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
+      - name: Upload profile APK artifact
+        if: hashFiles('flutter_app/build/app/outputs/flutter-apk/app-profile.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-profile
+          path: flutter_app/build/app/outputs/flutter-apk/app-profile.apk
+          retention-days: 30
+
       - name: Upload AAB artifact
         if: steps.keystore.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
@@ -153,9 +181,12 @@ jobs:
           tag_name: android-latest
           name: Recorpo — Android (beta)
           body: |
-            **APK** (`app-release.apk`) — instalação lateral no Android; baixe direto no celular.
+            **APK** (`app-release.apk`) — instalação lateral no Android; baixe direto no celular. Uso normal.
+
+            **APK profile** (`app-profile.apk`) — mesma build, mas com o serviço de VM ligado pra conectar o DevTools (`flutter attach`) e medir rebuild counts / FPS. Instale este quando for perfilar performance; depois volte pro release.
 
             **AAB** (`app-release.aab`) — arquivo assinado que sobe no Play Console (Track de testes internos, fechado, aberto ou produção).
           files: |
             flutter_app/build/app/outputs/flutter-apk/app-release.apk
+            flutter_app/build/app/outputs/flutter-apk/app-profile.apk
             flutter_app/build/app/outputs/bundle/release/app-release.aab
