@@ -18,6 +18,11 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
-    plan: free
+    # Produção roda no plano Starter pago (não desliga por inatividade →
+    # sem cold start). Mantemos aqui pra que um sync futuro do blueprint
+    # NÃO rebaixe o serviço pra free acidentalmente. Ver histórico: o
+    # serviço free antigo (assistente-caneta-backend) foi suspenso em
+    # 2026-07-31; a produção é assistente-caneta-backend-tkl7.
+    plan: starter
     region: ohio
     healthCheckPath: /health
