@@ -80,7 +80,7 @@ dependencies:
   # SentryNavigatorObserver. Unifica com o @sentry/node do backend.
   # LGPD: só ativa com --dart-define=SENTRY_DSN; beforeSend faz scrub
   # de qualquer dado de saúde antes de sair do dispositivo (main.dart).
-  sentry_flutter: ^8.9.0
+  sentry_flutter: ^9.0.0
 
 dev_dependencies:
   flutter_test:
