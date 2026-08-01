@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -173,7 +174,11 @@ class AuthService extends ChangeNotifier {
       // LGPD (F1): sincroniza aceite local pré-login com o backend.
       // Se backend já tem registro (mesmo revogação), respeita — impede
       // que login "reative" consent revogado.
-      await _sincronizarConsentimentoLGPD();
+      // EM BACKGROUND (unawaited): esse sync fazia GET /consentimentos +
+      // até 3× POST /consentimento, TUDO bloqueando a entrada — era o
+      // "gira e gira" após a digital/senha. É best-effort e idempotente,
+      // então roda sem travar a navegação. Já temos tokens setados.
+      unawaited(_sincronizarConsentimentoLGPD());
 
       _isLoading = false;
       notifyListeners();
@@ -236,7 +241,8 @@ class AuthService extends ChangeNotifier {
 
       // LGPD (F1): mesmo padrão do login por email — sincroniza aceite
       // local se existir, sem sobrescrever revogação prévia no backend.
-      await _sincronizarConsentimentoLGPD();
+      // Background (unawaited) pra não travar a entrada — ver login().
+      unawaited(_sincronizarConsentimentoLGPD());
 
       _isLoading = false;
       notifyListeners();
