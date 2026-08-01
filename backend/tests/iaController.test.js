@@ -6,7 +6,24 @@ const {
   _normalizarBula,
   _normalizarRefeicao,
   _parseJsonSeguro,
+  _responderErroIA,
 } = require('../src/controllers/iaController');
+
+// Fake mínimo de res: captura status/json; next captura o erro repassado.
+function fakeRes() {
+  return {
+    _status: null,
+    _json: null,
+    status(code) {
+      this._status = code;
+      return this;
+    },
+    json(payload) {
+      this._json = payload;
+      return this;
+    },
+  };
+}
 
 describe('_normalizarRefeicao', () => {
   test('valor completo passa como recebido', () => {
@@ -113,6 +130,43 @@ describe('_normalizarBula', () => {
     expect(r.indicacoes).toEqual([]);
     expect(r.efeitosComuns).toEqual([]);
     expect(r.confianca).toBe(0.5);
+  });
+});
+
+describe('_responderErroIA', () => {
+  test('timeout da Gemini → 504 (demorou demais)', () => {
+    const res = fakeRes();
+    const next = jest.fn();
+    _responderErroIA(new Error('Gemini timeout'), res, next);
+    expect(res._status).toBe(504);
+    expect(res._json.erro).toMatch(/demorou/i);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('timeout da OpenAI → 504', () => {
+    const res = fakeRes();
+    const next = jest.fn();
+    _responderErroIA(new Error('OpenAI timeout'), res, next);
+    expect(res._status).toBe(504);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('erro de status da IA → 502 (falha transitória)', () => {
+    const res = fakeRes();
+    const next = jest.fn();
+    _responderErroIA(new Error('Gemini 500'), res, next);
+    expect(res._status).toBe(502);
+    expect(res._json.erro).toMatch(/falha ao consultar/i);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('erro genérico (não-IA) → next(err), sem resposta HTTP aqui', () => {
+    const res = fakeRes();
+    const next = jest.fn();
+    const err = new Error('coisa aleatória');
+    _responderErroIA(err, res, next);
+    expect(res._status).toBeNull();
+    expect(next).toHaveBeenCalledWith(err);
   });
 });
 

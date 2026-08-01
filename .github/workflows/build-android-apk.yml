@@ -103,7 +103,8 @@ jobs:
         run: |
           set -o pipefail
           flutter build apk --release \
-            --dart-define=BUILD_TAG=${{ github.run_number }} 2>&1 | tee /tmp/build-apk.log || {
+            --dart-define=BUILD_TAG=${{ github.run_number }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_FLUTTER }} 2>&1 | tee /tmp/build-apk.log || {
             echo "==== APK BUILD FAILED — extracting cause ===="
             ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-apk.log | head -50 | tr '\n' ' ' | cut -c1-900)
             echo "::error::${ERR}"
@@ -123,7 +124,8 @@ jobs:
         run: |
           set -o pipefail
           flutter build appbundle --release \
-            --dart-define=BUILD_TAG=${{ github.run_number }} 2>&1 | tee /tmp/build-aab.log || {
+            --dart-define=BUILD_TAG=${{ github.run_number }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_FLUTTER }} 2>&1 | tee /tmp/build-aab.log || {
             echo "==== AAB BUILD FAILED — extracting cause ===="
             ERR=$(grep -iE -A4 "FAILURE:|What went wrong|error:|Caused by|Exception|not found|Could not" /tmp/build-aab.log | head -50 | tr '\n' ' ' | cut -c1-900)
             echo "::error::${ERR}"

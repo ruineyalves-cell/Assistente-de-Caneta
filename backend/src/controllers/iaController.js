@@ -143,6 +143,29 @@ function _normalizarBula(j) {
 // override via env var GEMINI_MODEL.
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
+// Timeout das chamadas de visão. Gemini/OpenAI multimodais legitimamente
+// levam vários segundos com imagem, então 28s é generoso pra não matar
+// requisição lenta legítima — mas FINITO, pra o socket nunca ficar
+// pendurado indefinidamente segurando conexão/worker se a API externa
+// travar. Abortar → erro "<label> timeout", que os handlers convertem
+// em 504 (distinto do 502 de falha real).
+const IA_TIMEOUT_MS = Number(process.env.IA_TIMEOUT_MS) || 28000;
+
+async function _fetchComTimeout(url, options, label) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), IA_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      throw new Error(`${label} timeout`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function _chamarGemini(imagemBase64, prompt, apiKey) {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=` +
@@ -158,41 +181,49 @@ async function _chamarGemini(imagemBase64, prompt, apiKey) {
     ],
     generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
   };
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const r = await _fetchComTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    'Gemini'
+  );
   if (!r.ok) throw new Error(`Gemini ${r.status}`);
   const data = await r.json();
   return data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 }
 
 async function _chamarOpenAI(imagemBase64, prompt, apiKey) {
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+  const r = await _fetchComTimeout(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: { url: `data:image/jpeg;base64,${imagemBase64}` },
+              },
+            ],
+          },
+        ],
+      }),
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      temperature: 0.2,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${imagemBase64}` },
-            },
-          ],
-        },
-      ],
-    }),
-  });
+    'OpenAI'
+  );
   if (!r.ok) throw new Error(`OpenAI ${r.status}`);
   const data = await r.json();
   return data?.choices?.[0]?.message?.content || '{}';
@@ -232,6 +263,28 @@ async function _analisar({ imagemBase64, prompt, normalizar }) {
 // ─────────────────────────────────────────────────────────────
 // Handlers públicos
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Traduz erro da camada de IA em resposta HTTP limpa pro app:
+ *  - "<label> timeout" → 504 (demorou demais; o app oferece "tentar de novo")
+ *  - "<label> <status>" → 502 (a IA respondeu erro; falha transitória)
+ *  - qualquer outro → next(err) (erro genuíno → errorHandler/Sentry)
+ */
+function _responderErroIA(err, res, next) {
+  const msg = String(err && err.message);
+  if (/timeout/i.test(msg) && /Gemini|OpenAI/.test(msg)) {
+    return res.status(504).json({
+      erro: 'A análise demorou mais que o esperado. Tente novamente.',
+    });
+  }
+  if (/Gemini|OpenAI/.test(msg)) {
+    return res.status(502).json({
+      erro: 'Falha ao consultar a IA. Tente novamente em instantes.',
+    });
+  }
+  return next(err);
+}
+
 async function analisar(req, res, next) {
   try {
     const { imagemBase64 } = schemaImagem.parse(req.body);
@@ -242,12 +295,7 @@ async function analisar(req, res, next) {
     });
     return res.json(r);
   } catch (err) {
-    if (String(err.message).match(/Gemini|OpenAI/)) {
-      return res.status(502).json({
-        erro: 'Falha ao consultar a IA. Tente novamente em instantes.',
-      });
-    }
-    next(err);
+    return _responderErroIA(err, res, next);
   }
 }
 
@@ -261,12 +309,7 @@ async function analisarRotulo(req, res, next) {
     });
     return res.json(r);
   } catch (err) {
-    if (String(err.message).match(/Gemini|OpenAI/)) {
-      return res.status(502).json({
-        erro: 'Falha ao consultar a IA. Tente novamente em instantes.',
-      });
-    }
-    next(err);
+    return _responderErroIA(err, res, next);
   }
 }
 
@@ -280,12 +323,7 @@ async function analisarBula(req, res, next) {
     });
     return res.json(r);
   } catch (err) {
-    if (String(err.message).match(/Gemini|OpenAI/)) {
-      return res.status(502).json({
-        erro: 'Falha ao consultar a IA. Tente novamente em instantes.',
-      });
-    }
-    next(err);
+    return _responderErroIA(err, res, next);
   }
 }
 
@@ -299,4 +337,5 @@ module.exports = {
   _normalizarBula,
   _normalizarRefeicao,
   _parseJsonSeguro,
+  _responderErroIA,
 };

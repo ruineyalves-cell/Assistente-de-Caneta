@@ -74,6 +74,14 @@ dependencies:
   local_auth: ^2.3.0
   crypto: ^3.0.5
 
+  # Observabilidade do app — crash tracking + performance tracing.
+  # Fecha a lacuna de "cegueira em produção" (crashes no celular do
+  # usuário eram invisíveis) e responde "a tela X demorou >2s?" via
+  # SentryNavigatorObserver. Unifica com o @sentry/node do backend.
+  # LGPD: só ativa com --dart-define=SENTRY_DSN; beforeSend faz scrub
+  # de qualquer dado de saúde antes de sair do dispositivo (main.dart).
+  sentry_flutter: ^8.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

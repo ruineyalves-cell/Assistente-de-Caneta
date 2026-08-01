@@ -1,7 +1,8 @@
 import 'dart:async' show unawaited;
 import 'dart:convert' show jsonDecode;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
@@ -51,7 +52,71 @@ import 'models/patient_profile.dart';
 import 'utils/constants.dart';
 import 'utils/validators.dart';
 
-void main() async {
+Future<void> main() async {
+  // Observabilidade (Sentry). O DSN entra só via --dart-define=SENTRY_DSN
+  // em build de produção; sem DSN, o Sentry fica DESLIGADO e nada sai do
+  // dispositivo (dev/CI/web). Assim não vaza dado em ambiente local nem
+  // exige chave pra rodar os testes/preview.
+  const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
+  if (sentryDsn.isEmpty) {
+    await _bootstrap();
+    return;
+  }
+
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = sentryDsn;
+      options.environment = kReleaseMode ? 'production' : 'development';
+      // Performance tracing — amostra 20% das transações (transição de
+      // tela via SentryNavigatorObserver + fetch do dashboard). Responde
+      // "a tela X demorou >2s?" sem custo alto de ingestão.
+      options.tracesSampleRate = 0.2;
+      // LGPD — app de saúde: NUNCA anexar IP/headers/username automático.
+      options.sendDefaultPii = false;
+      // Defesa em profundidade: rasga qualquer dado clínico/credencial
+      // que por acaso caia em `extra` antes do evento sair do device.
+      options.beforeSend = (event, hint) => _sanitizarEventoSentry(event);
+    },
+    appRunner: _bootstrap,
+  );
+}
+
+// Chaves que jamais podem sair do dispositivo (LGPD — medições de saúde
+// e credenciais). Match case-insensitive por substring.
+const _chavesSensiveisSentry = <String>[
+  'peso', 'proteina', 'agua', 'sintoma', 'efeito', 'alimento',
+  'refeicao', 'bula', 'rotulo', 'imagem', 'base64',
+  'senha', 'password', 'token', 'cpf', 'email',
+];
+
+bool _ehChaveSensivel(String chave) {
+  final k = chave.toLowerCase();
+  return _chavesSensiveisSentry.any((s) => k.contains(s));
+}
+
+/// beforeSend do Sentry: substitui por [REDACTED] qualquer chave de
+/// `extra` que possa carregar dado de saúde ou credencial. Não bloqueia
+/// o evento (queremos o crash), só limpa o payload.
+SentryEvent? _sanitizarEventoSentry(SentryEvent event) {
+  // `extra` é deprecado em favor de `contexts`, mas ainda é populado por
+  // integrações/SDK — então continuamos rasgando o que cair nele. ignore
+  // deliberado até migrarmos scrubbing pra contexts na Fase 2+.
+  // ignore: deprecated_member_use
+  final extra = event.extra;
+  if (extra == null || extra.isEmpty) return event;
+  final limpo = <String, dynamic>{};
+  extra.forEach((chave, valor) {
+    limpo[chave] = _ehChaveSensivel(chave) ? '[REDACTED]' : valor;
+  });
+  // ignore: deprecated_member_use
+  return event.copyWith(extra: limpo);
+}
+
+/// Boot original do app. Extraído de `main` pra rodar dentro do zone do
+/// Sentry (via appRunner) — assim erros não capturados durante o próprio
+/// boot também são reportados.
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final authService = AuthService();
@@ -244,6 +309,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       child: Consumer<ThemeController>(
         builder: (ctx, themeController, _) => MaterialApp(
           navigatorKey: _navKey,
+          // Sentry: mede automaticamente a duração de cada transição de
+          // tela (responde "a tela X demorou >2s?"). No-op se o Sentry
+          // não foi inicializado (build sem DSN).
+          navigatorObservers: [SentryNavigatorObserver()],
           title: AppConstants.brandName,
           debugShowCheckedModeBanner: false,
           localizationsDelegates: const [

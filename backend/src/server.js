@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const app = require('./app');
 const db = require('./config/db');
-const { logger, capturarErro } = require('./utils/logger');
+const { logger, capturarErro, capturarAviso } = require('./utils/logger');
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -46,15 +46,16 @@ async function aplicarMigrationsPendentes() {
       // em logs. Fix definitivo: rodar a migration com role owner (via
       // psql direto no Render Shell ou fazendo REASSIGN OWNED).
       if (err && err.code === '42501') {
-        logger.warn(
-          {
-            evento: 'migration_skip_permission',
-            arquivo: f,
-            msg: err.message,
-            atencao: 'Se esta é uma migration NOVA, rode manualmente como owner. Boot continua.',
-          },
-          `migration ${f} ignorada por falta de OWNER`
-        );
+        // capturarAviso (não logger.warn): manda pro Sentry como
+        // 'warning' pra disparar alerta. Uma migration NOVA pulada aqui
+        // é uma bomba-relógio (rota quebra em runtime); não pode ficar
+        // enterrada só no log.
+        capturarAviso(`migration ${f} ignorada por falta de OWNER`, {
+          evento: 'migration_skip_permission',
+          arquivo: f,
+          msg: err.message,
+          atencao: 'Se esta é uma migration NOVA, rode manualmente como owner. Boot continua.',
+        });
         continue;
       }
       logger.error({ evento: 'migration_falha', arquivo: f, err }, `migration ${f} falhou`);

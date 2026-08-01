@@ -94,6 +94,20 @@ function capturarErro(err, contexto = {}) {
 }
 
 /**
+ * Aviso operacional que PRECISA de visibilidade em produção, mesmo sem
+ * ser um erro/exception (ex.: migration pulada por falta de OWNER — se
+ * for uma migration NOVA, uma rota vai quebrar em runtime e ninguém
+ * fica sabendo até o usuário reclamar). Loga warn + manda pro Sentry
+ * como captureMessage nível 'warning', que dispara alerta lá.
+ */
+function capturarAviso(mensagem, contexto = {}) {
+  logger.warn({ ...contexto }, mensagem);
+  if (sentry) {
+    sentry.captureMessage(mensagem, { level: 'warning', extra: contexto });
+  }
+}
+
+/**
  * Eventos de segurança (login falha, lockout, refresh reuse, CORS bloqueado).
  * Nível "warn" pra facilitar alertas ("me avise se aparecerem >10/min").
  */
@@ -101,4 +115,4 @@ function logSeguranca(evento, contexto = {}) {
   logger.warn({ evento, ...contexto }, `[seguranca] ${evento}`);
 }
 
-module.exports = { logger, capturarErro, logSeguranca, sentry };
+module.exports = { logger, capturarErro, capturarAviso, logSeguranca, sentry };
