@@ -196,6 +196,22 @@ class PaywallScreen extends StatelessWidget {
       if (p.id == PremiumService.kSkuAnual) anual = p;
     }
 
+    // Economia do anual CALCULADA dos preços REAIS do Play — nunca chumbada.
+    // Um "%" fixo viraria mentira (e risco de política) se o preço mudar no
+    // Play Console. Se não der pra calcular, não mostra badge de economia.
+    String? economiaAnual;
+    if (anual != null && mensal != null && mensal.rawPrice > 0) {
+      final anualSeMensal = mensal.rawPrice * 12;
+      if (anual.rawPrice < anualSeMensal) {
+        final pct = ((1 - anual.rawPrice / anualSeMensal) * 100).round();
+        final mesesGratis =
+            ((anualSeMensal - anual.rawPrice) / mensal.rawPrice).round();
+        economiaAnual = mesesGratis >= 1
+            ? '$pct% de economia · ~$mesesGratis ${mesesGratis == 1 ? "mês" : "meses"} grátis'
+            : '$pct% de economia';
+      }
+    }
+
     return Column(
       children: [
         if (anual != null)
@@ -205,7 +221,7 @@ class PaywallScreen extends StatelessWidget {
             produto: anual,
             titulo: 'Anual',
             destaque: 'Melhor valor',
-            economia: '37% de economia',
+            economia: economiaAnual,
           ),
         if (anual != null && mensal != null) const SizedBox(height: 12),
         if (mensal != null)
