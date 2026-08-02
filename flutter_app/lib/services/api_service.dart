@@ -423,7 +423,10 @@ class ApiService {
   /// completo (usuário + perfil + consentimentos + logs + scores).
   Future<Map<String, dynamic>> exportarDadosLgpd() async {
     try {
-      final response = await _dio.get('/api/lgpd/exportar');
+      // Retry transparente: o relatório PDF depende DESTE GET. Sem ele,
+      // uma piscada do backend (restart/deploy) ou de rede fazia o
+      // relatório "não gerar". GET idempotente — seguro retentar.
+      final response = await _comRetry(() => _dio.get('/api/lgpd/exportar'));
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _parseError(e);
