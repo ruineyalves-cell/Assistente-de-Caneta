@@ -1910,7 +1910,7 @@ class _HomePageState extends State<HomePage> {
                 // 1) Saudação personalizada — hora do dia + primeiro nome +
                 //    concordância de gênero.
                 _SaudacaoHumana(genero: _genero),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 // 2) Lote 32.3 — Resumo diário do backend, com fallback
                 //    para a antiga dica local se o backend não respondeu.
                 _resumoDiario != null
@@ -2276,61 +2276,38 @@ class _ResumoDoDiaCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final linhas = ((resumo['linhas'] as List?) ?? const [])
         .cast<Map<String, dynamic>>();
-    final vazio = resumo['vazio'] == true;
-    return Container(
-      padding: const EdgeInsets.all(RecorpoSpacing.md),
-      decoration: BoxDecoration(
-        color: RecorpoColors.confirma.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
-        border: Border.all(
-          color: RecorpoColors.confirma.withValues(alpha: 0.28),
-        ),
-      ),
+    // Fase 4 (declutter): antes era um card com borda + header "RESUMO DE
+    // HOJE". Agora sem casca — as linhas ficam coladas na saudação acima,
+    // como se fossem parte dela. Se não há linhas, não ocupa espaço.
+    if (linhas.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, right: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(vazio ? Icons.wb_sunny_outlined : Icons.today_outlined,
-                  size: 16, color: RecorpoColors.confirma),
-              const SizedBox(width: 6),
-              Text(
-                'RESUMO DE HOJE',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 2,
-                  color: RecorpoColors.confirma,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...linhas.map((l) {
-            final tipo = (l['tipo'] as String?) ?? 'dica';
-            final texto = _textoLinha(tipo, (l['texto'] as String?) ?? '');
-            final cor = _corPorTipo(tipo);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(_iconePorTipo(tipo), size: 16, color: cor),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      texto,
-                      style: TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: scheme.onSurface.withValues(alpha: 0.9)),
-                    ),
+        children: linhas.map((l) {
+          final tipo = (l['tipo'] as String?) ?? 'dica';
+          final texto = _textoLinha(tipo, (l['texto'] as String?) ?? '');
+          final cor = _corPorTipo(tipo);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(_iconePorTipo(tipo), size: 15, color: cor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    texto,
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: scheme.onSurface.withValues(alpha: 0.78)),
                   ),
-                ],
-              ),
-            );
-          }),
-        ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -2957,64 +2934,48 @@ class _FocoDoDia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: AppColors.azulClinico.withValues(alpha: 0.08),
-      shape: RoundedRectangleBorder(
+    // Fase 4 (declutter): antes era um card alto com header "FOCO DO DIA".
+    // Vira um chip compacto de uma linha — info quase estática não precisa
+    // ocupar tanta altura antes da grade do dia.
+    final semEixo = eixo == null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.azulClinico.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
+        border: Border.all(
             color: AppColors.azulClinico.withValues(alpha: 0.3), width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.shield_outlined,
-                    color: AppColors.azulClinico, size: 20),
-                const SizedBox(width: 8),
-                Text('FOCO DO DIA',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.azulClinico,
-                      letterSpacing: 2.0,
-                    )),
-              ],
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Blindagem Muscular',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            if (eixo != null)
-              Row(
-                children: [
-                  const Icon(Icons.science_outlined,
-                      size: 14, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      'Eixo: ${eixo!.label}',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+      child: Row(
+        children: [
+          const Icon(Icons.shield_outlined,
+              color: AppColors.azulClinico, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: semEixo
+                ? Text(
+                    'Configure sua matriz metabólica no Perfil.',
+                    style:
+                        TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  )
+                : Row(
+                    children: [
+                      const Text('Blindagem Muscular',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          '· ${eixo!.label}',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              )
-            else
-              Text(
-                'Configure sua matriz metabólica na aba Perfil para '
-                'personalizar o acompanhamento.',
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
