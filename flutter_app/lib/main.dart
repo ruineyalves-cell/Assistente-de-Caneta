@@ -1921,65 +1921,62 @@ class _HomePageState extends State<HomePage> {
                       )
                     : _DicaDoDiaHumana(genero: _genero),
                 const SizedBox(height: 16),
-                // 3) Foco do dia (Blindagem Muscular + eixo)
-                _FocoDoDia(eixo: _eixo),
-                const SizedBox(height: 16),
-                // Ação sugerida — no máximo UMA por vez, por prioridade
-                // (Fase 4 declutter): antes, alerta clínico + preparar
-                // consulta + importar peso podiam EMPILHAR. Prioridade:
-                // alerta clínico (saúde) > preparar consulta > importar peso.
+                // Alerta clínico URGENTE (sinal de saúde) — banner próprio,
+                // no máx. 1, FORA do painel STATUS ATUAL (não vira tilezinho).
+                // Fallback: importar peso quando não há alerta.
                 Builder(builder: (context) {
-                  Widget? nudge;
+                  Widget? urgente;
                   if (_alertas.isNotEmpty) {
-                    nudge = _BannerAlertaClinico(
+                    urgente = _BannerAlertaClinico(
                       alerta: _alertas.first,
                       onAbrir: () => Navigator.of(context).push(
                         MaterialPageRoute(
                             builder: (_) => const PreConsultaScreen()),
                       ),
                     );
-                  } else if (logsProvider.logs.length >= 7) {
-                    nudge = _CardPrepararConsulta(
-                      onAbrir: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const PreConsultaScreen()),
-                      ),
-                    );
                   } else if (_deveOfertarImportarPeso(pesoAtual)) {
-                    nudge = _BannerImportarPeso(
+                    urgente = _BannerImportarPeso(
                       pesoDeHealth: _health.pesoUltimoKg!,
                       quando: _health.pesoUltimoEm!,
                       onImportar: () => _importarPesoDeHealth(),
                     );
                   }
-                  if (nudge == null) return const SizedBox.shrink();
+                  if (urgente == null) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: nudge,
+                    child: urgente,
                   );
                 }),
-                // Lembrete semanal da dose — fica SEMPRE visível pra quem usa
-                // medicação (adesão é core), fora do rodízio de nudges acima.
-                if (_eixo?.envolveMedicacao ?? false) ...[
-                  _LembreteDoseCard(
-                    habilitado: _lembreteDoseHabilitado,
-                    weekday: _lembreteDoseWeekday,
-                    hora: _lembreteDoseHora,
-                    minuto: _lembreteDoseMinuto,
-                    nomeMedicamento: _perfil?.medicationNome,
-                    onAbrir: () async {
-                      final resultado = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(
-                          builder: (_) => DoseReminderScreen(
-                            nomeMedicamento: _perfil?.medicationNome,
-                          ),
-                        ),
-                      );
-                      if (resultado == true) await _carregarContexto();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                // Painel STATUS ATUAL (ideia do usuário): status do tratamento
+                // + ações rotineiras (preparar consulta, lembrete) agrupadas
+                // num card só, em vez de 3 blocos empilhados.
+                _StatusAtualCard(
+                  eixo: _eixo,
+                  onPrepararConsulta: logsProvider.logs.length >= 7
+                      ? () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const PreConsultaScreen()),
+                          )
+                      : null,
+                  lembrete: (_eixo?.envolveMedicacao ?? false)
+                      ? _LembreteInfo(
+                          habilitado: _lembreteDoseHabilitado,
+                          resumo:
+                              '${_abrevDia(_lembreteDoseWeekday)} ${_lembreteDoseHora.toString().padLeft(2, '0')}:${_lembreteDoseMinuto.toString().padLeft(2, '0')}',
+                          onTap: () async {
+                            final ok = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => DoseReminderScreen(
+                                  nomeMedicamento: _perfil?.medicationNome,
+                                ),
+                              ),
+                            );
+                            if (ok == true) await _carregarContexto();
+                          },
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 16),
                 // 4) HERO — grid 2×2 de EixoCards (Lote 26)
                 //    Cada card mostra o estado real do dia e leva pra
                 //    ação/detalhe. Visual estilo Samsung Health.
@@ -2581,77 +2578,6 @@ class _BannerAlertaClinico extends StatelessWidget {
   }
 }
 
-/// Lote 32.2 — Card que abre a tela "Preparar consulta". Fica no
-/// dashboard só depois de 7+ dias registrados (senão o resumo é ralo).
-class _CardPrepararConsulta extends StatelessWidget {
-  final VoidCallback onAbrir;
-  const _CardPrepararConsulta({required this.onAbrir});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
-      onTap: onAbrir,
-      child: Container(
-        padding: const EdgeInsets.all(RecorpoSpacing.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              RecorpoColors.confirma.withValues(alpha: 0.14),
-              RecorpoColors.confirma.withValues(alpha: 0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
-          border: Border.all(
-            color: RecorpoColors.confirma.withValues(alpha: 0.35),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: RecorpoColors.confirma,
-                borderRadius:
-                    BorderRadius.circular(RecorpoSpacing.radiusSm),
-              ),
-              child: const Icon(Icons.assignment_outlined,
-                  color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: RecorpoSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Preparar minha próxima consulta',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface)),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Resumo objetivo + perguntas curadas.',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.7)),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right,
-                color: scheme.onSurface.withValues(alpha: 0.5)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Lote 32.1 — Banner que oferece importar o último peso lido do
 /// Health Connect (tipicamente vindo de uma balança smart) para o
 /// log do app. Reduz atrito: quem se pesa em balança Xiaomi/Withings
@@ -2823,159 +2749,171 @@ class _CardSono extends StatelessWidget {
   }
 }
 
-/// Lote 30 — Card de acesso ao lembrete semanal da dose. Aparece só
-/// quando o eixo envolve medicação. Sem configuração, mostra CTA de
-/// ativar; com configuração, mostra próximo dia/horário.
-class _LembreteDoseCard extends StatelessWidget {
+/// Abreviação do dia da semana (DateTime.monday=1 … sunday=7).
+String _abrevDia(int weekday) {
+  const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  return (weekday >= 1 && weekday <= 7) ? dias[weekday - 1] : '';
+}
+
+/// Dados do tile de lembrete de dose dentro do painel STATUS ATUAL.
+class _LembreteInfo {
   final bool habilitado;
-  final int weekday;
-  final int hora;
-  final int minuto;
-  final String? nomeMedicamento;
-  final VoidCallback onAbrir;
-
-  const _LembreteDoseCard({
+  final String resumo; // ex.: "Qui 09:00"
+  final VoidCallback onTap;
+  const _LembreteInfo({
     required this.habilitado,
-    required this.weekday,
-    required this.hora,
-    required this.minuto,
-    required this.nomeMedicamento,
-    required this.onAbrir,
+    required this.resumo,
+    required this.onTap,
   });
+}
 
-  static const _diaLongo = <int, String>{
-    DateTime.monday: 'Segunda',
-    DateTime.tuesday: 'Terça',
-    DateTime.wednesday: 'Quarta',
-    DateTime.thursday: 'Quinta',
-    DateTime.friday: 'Sexta',
-    DateTime.saturday: 'Sábado',
-    DateTime.sunday: 'Domingo',
-  };
+/// Painel "STATUS ATUAL" (ideia do usuário): agrupa o status do tratamento
+/// + as ações rotineiras (preparar consulta, lembrete de dose) num card só,
+/// em vez de 3 blocos empilhados. Slots CONDICIONAIS: a divisória e os tiles
+/// só aparecem quando há ação (0 → só o status; 1 → um tile; 2 → lado a lado).
+/// O alerta clínico NÃO entra aqui — fica como banner urgente separado.
+class _StatusAtualCard extends StatelessWidget {
+  final EixoFarmacologico? eixo;
+  final VoidCallback? onPrepararConsulta; // null = não mostra
+  final _LembreteInfo? lembrete; // null = não mostra
+
+  const _StatusAtualCard({
+    required this.eixo,
+    this.onPrepararConsulta,
+    this.lembrete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final horaFmt =
-        '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}';
-    final subtitulo = habilitado
-        ? '${_diaLongo[weekday]} às $horaFmt · alerta na véspera'
-        : 'Toque para receber alertas na véspera e no dia';
-    final rotulo = habilitado ? 'Lembrete ativo' : 'Ativar lembrete da dose';
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
-      onTap: onAbrir,
-      child: Container(
-        padding: const EdgeInsets.all(RecorpoSpacing.md),
-        decoration: BoxDecoration(
-          color: habilitado
-              ? scheme.primary.withValues(alpha: 0.08)
-              : scheme.surface,
-          borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
-          border: Border.all(
-            color: habilitado
-                ? scheme.primary.withValues(alpha: 0.35)
-                : scheme.onSurface.withValues(alpha: 0.12),
-          ),
+    final acoes = <Widget>[
+      if (onPrepararConsulta != null)
+        _StatusTile(
+          icone: Icons.assignment_outlined,
+          cor: RecorpoColors.confirma,
+          titulo: 'Preparar consulta',
+          subtitulo: 'Resumo + perguntas',
+          onTap: onPrepararConsulta!,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: RecorpoGradients.primary,
-                borderRadius: BorderRadius.circular(RecorpoSpacing.radiusSm),
+      if (lembrete != null)
+        _StatusTile(
+          icone: lembrete!.habilitado
+              ? Icons.notifications_active_outlined
+              : Icons.notifications_none_outlined,
+          cor: AppColors.azulClinico,
+          titulo: lembrete!.habilitado ? 'Lembrete ativo' : 'Ativar lembrete',
+          subtitulo: lembrete!.habilitado ? lembrete!.resumo : 'Dose semanal',
+          onTap: lembrete!.onTap,
+        ),
+    ];
+
+    final semEixo = eixo == null;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.azulClinico.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: AppColors.azulClinico.withValues(alpha: 0.28), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shield_outlined,
+                  color: AppColors.azulClinico, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: semEixo
+                    ? Text('Configure sua matriz metabólica no Perfil.',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade500))
+                    : Row(
+                        children: [
+                          const Text('Blindagem Muscular',
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700)),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text('· ${eixo!.label}',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey.shade500),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
               ),
-              child: Icon(
-                habilitado
-                    ? Icons.notifications_active
-                    : Icons.notifications_none,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: RecorpoSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(rotulo,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface)),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitulo,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.7)),
-                  ),
+            ],
+          ),
+          if (acoes.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                for (var i = 0; i < acoes.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  Expanded(child: acoes[i]),
                 ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: scheme.onSurface.withValues(alpha: 0.5),
+              ],
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _FocoDoDia extends StatelessWidget {
-  final EixoFarmacologico? eixo;
-  const _FocoDoDia({required this.eixo});
+/// Tile de ação compacto dentro do painel STATUS ATUAL.
+class _StatusTile extends StatelessWidget {
+  final IconData icone;
+  final Color cor;
+  final String titulo;
+  final String subtitulo;
+  final VoidCallback onTap;
+
+  const _StatusTile({
+    required this.icone,
+    required this.cor,
+    required this.titulo,
+    required this.subtitulo,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Fase 4 (declutter): antes era um card alto com header "FOCO DO DIA".
-    // Vira um chip compacto de uma linha — info quase estática não precisa
-    // ocupar tanta altura antes da grade do dia.
-    final semEixo = eixo == null;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.azulClinico.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppColors.azulClinico.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.shield_outlined,
-              color: AppColors.azulClinico, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: semEixo
-                ? Text(
-                    'Configure sua matriz metabólica no Perfil.',
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                  )
-                : Row(
-                    children: [
-                      const Text('Blindagem Muscular',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w700)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          '· ${eixo!.label}',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: cor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icone, size: 18, color: cor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo,
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  Text(subtitulo,
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
