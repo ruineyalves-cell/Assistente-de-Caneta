@@ -122,6 +122,16 @@ class ReportPdfService {
     return doc.save();
   }
 
+  /// Texto de célula SEGURO pra tabela do PDF: trunca strings longas.
+  /// Motivo: uma célula gigante (ex.: contexto de sintoma com nota enorme
+  /// ou dado corrompido) não cabe em página nenhuma e faz o `MultiPage`
+  /// entrar em loop de paginação → "Out of Memory". Vazio → travessão.
+  static String _celTexto(String? s, {int max = 60}) {
+    final t = s?.replaceAll(RegExp(r'\s+'), ' ').trim() ?? '';
+    if (t.isEmpty) return '—';
+    return t.length <= max ? t : '${t.substring(0, max - 1)}…';
+  }
+
   // ============================================================================
   // 1. SUMÁRIO EXECUTIVO
   // ============================================================================
@@ -575,11 +585,9 @@ class ReportPdfService {
             .take(40)
             .map((e) => [
                   DateFormat('dd/MM HH:mm', 'pt_BR').format(e.quando),
-                  infoDe(e.tipo).rotulo,
+                  _celTexto(infoDe(e.tipo).rotulo, max: 30),
                   '${e.intensidade.valor} · ${e.intensidade.label}',
-                  (e.contexto == null || e.contexto!.isEmpty)
-                      ? '—'
-                      : e.contexto!,
+                  _celTexto(e.contexto),
                 ])
             .toList(),
       ),
