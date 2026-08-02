@@ -1813,6 +1813,8 @@ class _HomePageState extends State<HomePage> {
               ),
               Text('A IA lê a foto e organiza o registro pra você.',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              const SizedBox(height: 8),
+              const _QuotaIaBadge(),
               const SizedBox(height: 16),
               _ScannersRow(),
             ],
@@ -2415,6 +2417,56 @@ Future<void> abrirFluxoRefeicao(BuildContext context) async {
 
 /// Dois botões de scanner lado a lado: refeição (câmera do Lote 9) e
 /// prescrição (OCR do Lote 10). Ambos abrem tela cheia.
+/// Linha discreta de cota de IA no diálogo "Registrar com IA" — surfa o
+/// limite Free no MOMENTO DE VALOR (visibilidade proativa do Premium), sem
+/// poluir o card. Premium → "ilimitadas".
+class _QuotaIaBadge extends StatelessWidget {
+  const _QuotaIaBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PremiumService>(
+      builder: (ctx, premium, _) {
+        if (premium.isPremium) {
+          return _linha(Icons.auto_awesome, 'Análises de IA ilimitadas',
+              AppColors.azulClinico);
+        }
+        return FutureBuilder<int?>(
+          future:
+              FeatureUsageService().restante(Feature.iaVisao, premium: false),
+          builder: (ctx, snap) {
+            final restam = snap.data;
+            if (restam == null) return const SizedBox.shrink();
+            final total = FeaturePolicy.quotaFree(Feature.iaVisao)!.limite;
+            if (restam <= 0) {
+              return _linha(Icons.lock_outline,
+                  'Cota grátis de hoje usada · renova amanhã',
+                  Colors.grey.shade600);
+            }
+            return _linha(Icons.bolt_outlined,
+                '$restam de $total análises de IA grátis hoje',
+                Colors.grey.shade600);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _linha(IconData icone, String texto, Color cor) {
+    return Row(
+      children: [
+        Icon(icone, size: 14, color: cor),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(texto,
+              style: TextStyle(
+                  fontSize: 12, color: cor, fontWeight: FontWeight.w600)),
+        ),
+      ],
+    );
+  }
+}
+
 class _ScannersRow extends StatelessWidget {
   Future<void> _capturarPara(
     BuildContext context, {
