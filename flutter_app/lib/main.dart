@@ -1779,27 +1779,44 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Abre o seletor "Registrar com IA" — bottom sheet com os 4 tipos de
-  /// registro por câmera (prato/refeição, rótulo, bula, prescrição).
-  /// Reusa `_ScannersRow` sem duplicar a lógica de captura/OCR/Gemini.
+  /// Abre o seletor "Registrar com IA" — diálogo FLUTUANTE E CENTRALIZADO
+  /// (não bottom sheet). Antes, como sheet, os botões inferiores ficavam
+  /// colados na barra de navegação do aparelho; centralizado, encaixa em
+  /// qualquer celular/marca independente da nav bar. Reusa `_ScannersRow`
+  /// sem duplicar a lógica de captura/OCR/Gemini.
   void _abrirRegistroIaSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Registrar com IA',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text('A IA lê a foto e organiza o registro pra você.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-            const SizedBox(height: 16),
-            _ScannersRow(),
-          ],
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Registrar com IA',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Fechar',
+                  ),
+                ],
+              ),
+              Text('A IA lê a foto e organiza o registro pra você.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              const SizedBox(height: 16),
+              _ScannersRow(),
+            ],
+          ),
         ),
       ),
     );
