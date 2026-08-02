@@ -1924,35 +1924,42 @@ class _HomePageState extends State<HomePage> {
                 // 3) Foco do dia (Blindagem Muscular + eixo)
                 _FocoDoDia(eixo: _eixo),
                 const SizedBox(height: 16),
-                // 3a) Lote 32.1 — Banner "importar peso da balança smart"
-                //     Aparece só quando o Health Connect tem um peso mais
-                //     recente que o último log do app (delta > 24h ou peso
-                //     diferente do último).
-                if (_deveOfertarImportarPeso(pesoAtual))
-                  _BannerImportarPeso(
-                    pesoDeHealth: _health.pesoUltimoKg!,
-                    quando: _health.pesoUltimoEm!,
-                    onImportar: () => _importarPesoDeHealth(),
-                  ),
-                if (_deveOfertarImportarPeso(pesoAtual))
-                  const SizedBox(height: 12),
-                // 3b) Lote 32.4 — Alertas clínicos objetivos (sintoma
-                //     persistente etc.). Renderiza no máximo 1 banner —
-                //     se houver múltiplos, mostra o primeiro (o backend
-                //     ordena pela severidade / gravidade).
-                if (_alertas.isNotEmpty) ...[
-                  _BannerAlertaClinico(
-                    alerta: _alertas.first,
-                    onAbrir: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const PreConsultaScreen()),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                // 3b) Lote 30 — Lembrete semanal da dose. Só aparece se
-                //     o eixo envolve medicação (não faz sentido em
-                //     recomposição natural).
+                // Ação sugerida — no máximo UMA por vez, por prioridade
+                // (Fase 4 declutter): antes, alerta clínico + preparar
+                // consulta + importar peso podiam EMPILHAR. Prioridade:
+                // alerta clínico (saúde) > preparar consulta > importar peso.
+                Builder(builder: (context) {
+                  Widget? nudge;
+                  if (_alertas.isNotEmpty) {
+                    nudge = _BannerAlertaClinico(
+                      alerta: _alertas.first,
+                      onAbrir: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const PreConsultaScreen()),
+                      ),
+                    );
+                  } else if (logsProvider.logs.length >= 7) {
+                    nudge = _CardPrepararConsulta(
+                      onAbrir: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const PreConsultaScreen()),
+                      ),
+                    );
+                  } else if (_deveOfertarImportarPeso(pesoAtual)) {
+                    nudge = _BannerImportarPeso(
+                      pesoDeHealth: _health.pesoUltimoKg!,
+                      quando: _health.pesoUltimoEm!,
+                      onImportar: () => _importarPesoDeHealth(),
+                    );
+                  }
+                  if (nudge == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: nudge,
+                  );
+                }),
+                // Lembrete semanal da dose — fica SEMPRE visível pra quem usa
+                // medicação (adesão é core), fora do rodízio de nudges acima.
                 if (_eixo?.envolveMedicacao ?? false) ...[
                   _LembreteDoseCard(
                     habilitado: _lembreteDoseHabilitado,
@@ -1970,18 +1977,6 @@ class _HomePageState extends State<HomePage> {
                       );
                       if (resultado == true) await _carregarContexto();
                     },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Lote 32.2 — Preparar consulta. Só aparece quando o
-                // usuário já tem ≥7 dias de registros — antes disso o
-                // resumo fica ralo e a experiência decepciona.
-                if (logsProvider.logs.length >= 7) ...[
-                  _CardPrepararConsulta(
-                    onAbrir: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const PreConsultaScreen()),
-                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
