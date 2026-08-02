@@ -148,36 +148,49 @@ class _EixoIconePainter extends CustomPainter {
     ..strokeJoin = StrokeJoin.round
     ..isAntiAlias = true;
 
-  // ── Água: gota com onda d'água em movimento ─────────────────────────────
+  // ── Água: gota (teardrop correta) com brilho subindo por dentro ─────────
   void _agua(Canvas canvas) {
-    final drop = Path()
-      ..moveTo(12, 3.5)
-      ..cubicTo(12, 3.5, 5.5, 11, 5.5, 15)
-      ..arcToPoint(const Offset(18.5, 15), radius: const Radius.circular(6.5))
-      ..cubicTo(18.5, 11, 12, 3.5, 12, 3.5)
-      ..close();
+    final drop = _gotaPath();
 
-    // "Vidro" translúcido.
-    canvas.drawPath(drop, _fill..color = Colors.white.withValues(alpha: 0.18));
+    // Corpo da gota — "vidro fosco".
+    canvas.drawPath(
+      drop,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.30)
+        ..isAntiAlias = true,
+    );
 
-    // Água com superfície ondulada que escorre (fase desliza com t).
+    // Brilho que sobe de baixo pra cima DENTRO da gota (luz escorrendo).
+    // op = sin(t·π): nasce embaixo, brilha no meio, some no topo → loop suave.
     canvas.save();
     canvas.clipPath(drop);
-    final phase = t * 2 * math.pi;
-    const nivel = 11.0;
-    final onda = Path()..moveTo(0, 24);
-    for (double x = 0; x <= 24; x += 1) {
-      final y = nivel + math.sin(x / 24 * 4 * math.pi + phase) * 0.9;
-      onda.lineTo(x, y);
-    }
-    onda
-      ..lineTo(24, 24)
-      ..close();
-    canvas.drawPath(
-        onda, Paint()..color = Colors.white.withValues(alpha: 0.42));
+    final yBrilho = 20.0 - t * 16.0;
+    final op = math.sin(t * math.pi);
+    canvas.drawCircle(
+      Offset(12, yBrilho),
+      3.6,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.85 * op)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.2),
+    );
     canvas.restore();
 
-    canvas.drawPath(drop, _stroke(1.5, 0.92));
+    // Contorno nítido.
+    canvas.drawPath(drop, _stroke(1.5, 0.95));
+  }
+
+  /// Gota (teardrop): círculo na base + topo pontudo, unidos por boolean
+  /// union (sem depender de winding/arc, que antes deixava a gota torta).
+  Path _gotaPath() {
+    final circ = Path()
+      ..addOval(Rect.fromCircle(center: const Offset(12, 14.5), radius: 6.0));
+    final topo = Path()
+      ..moveTo(12, 2.6)
+      ..quadraticBezierTo(8.6, 8, 7.3, 12.8)
+      ..lineTo(16.7, 12.8)
+      ..quadraticBezierTo(15.4, 8, 12, 2.6)
+      ..close();
+    return Path.combine(PathOperation.union, circ, topo);
   }
 
   // ── Peso: balança com agulha varrendo + brilho nos extremos ─────────────
