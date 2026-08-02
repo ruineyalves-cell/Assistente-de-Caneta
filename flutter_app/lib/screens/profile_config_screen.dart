@@ -519,23 +519,31 @@ class _ProfileConfigScreenState extends State<ProfileConfigScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            // Lote 32.5 — Segurança do app (PIN + biometria).
+            const SizedBox(height: 24),
+
+            // ── Segurança e privacidade ───────────────────────────────
+            // Agrupa bloqueio do app, login por biometria e dados/LGPD numa
+            // seção própria (antes ficavam soltos misturados com o resto).
+            const _SecaoTitulo('Segurança e privacidade'),
             const _CardAppLock(),
-            const SizedBox(height: 16),
-            // Login rápido: biometria substitui digitação de email/senha
-            // no login. Separado do AppLock (que é gate pós-login).
+            const SizedBox(height: 12),
             const _CardLoginBiometrico(),
-            const SizedBox(height: 16),
-            // Lote 32.7 — Notificações contextuais.
-            const _CardNotificacoes(),
-            const SizedBox(height: 16),
-            // Lote 32.6 — Meus dados (LGPD).
+            const SizedBox(height: 12),
+            // Meus dados (exportar / excluir conta — LGPD): é privacidade.
             const _CardMeusDados(),
-            const SizedBox(height: 16),
-            const _CardPremium(),
-            const SizedBox(height: 16),
+
+            const SizedBox(height: 24),
+
+            // ── Preferências ──────────────────────────────────────────
+            const _SecaoTitulo('Preferências'),
+            const _CardNotificacoes(),
+            const SizedBox(height: 12),
             const _CardAparencia(),
+
+            const SizedBox(height: 24),
+
+            // ── Premium (oferta) ──────────────────────────────────────
+            const _CardPremium(),
             const SizedBox(height: 32),
           ],
         ),
@@ -1056,6 +1064,30 @@ class _Header extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cabeçalho leve de seção (só um rótulo em caixa alta) — agrupa cards
+/// soltos sem aninhar Card-dentro-de-Card. Dá hierarquia + respiro.
+class _SecaoTitulo extends StatelessWidget {
+  final String texto;
+  const _SecaoTitulo(this.texto);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, top: 4, bottom: 10),
+      child: Text(
+        texto.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       ),
     );
