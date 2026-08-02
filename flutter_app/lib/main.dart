@@ -2796,12 +2796,13 @@ class _StatusAtualCard extends StatelessWidget {
         ),
       if (lembrete != null)
         _StatusTile(
-          icone: lembrete!.habilitado
-              ? Icons.notifications_active_outlined
-              : Icons.notifications_none_outlined,
+          // Seringa (não sino) + rótulo "Dose" deixam inequívoco que é o
+          // lembrete da APLICAÇÃO da medicação — não da consulta ao lado.
+          icone: Icons.vaccines_outlined,
           cor: AppColors.azulClinico,
-          titulo: lembrete!.habilitado ? 'Lembrete ativo' : 'Ativar lembrete',
-          subtitulo: lembrete!.habilitado ? lembrete!.resumo : 'Dose semanal',
+          titulo: lembrete!.habilitado ? 'Dose semanal' : 'Ativar dose',
+          subtitulo:
+              lembrete!.habilitado ? lembrete!.resumo : 'Lembrete semanal',
           onTap: lembrete!.onTap,
         ),
     ];
