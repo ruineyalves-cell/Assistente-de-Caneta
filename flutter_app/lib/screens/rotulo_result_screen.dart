@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
+import '../services/premium_service.dart';
+import '../services/rotulo_insights.dart';
 import '../utils/image_prep.dart';
 import '../utils/theme.dart';
+import 'paywall_screen.dart';
 
 /// Lote 32.8 — Resultado do scanner de rótulo alimentar.
 ///
@@ -98,6 +101,7 @@ class _RotuloResultScreenState extends State<RotuloResultScreen> {
         const SizedBox(height: RecorpoSpacing.xl),
         _TabelaMacros(dados: d),
         const SizedBox(height: RecorpoSpacing.xl),
+        _PainelInsights(dados: d),
         _AvisoLegal(),
       ],
     );
@@ -212,6 +216,172 @@ class _LinhaMacro extends StatelessWidget {
                 color: valor == null
                     ? scheme.onSurface.withValues(alpha: 0.4)
                     : scheme.onSurface),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Painel de análise educativa (Fase 3b). Determinístico + fonte pública.
+/// Free vê um teaser (→ paywall); Premium vê as notas. Não aparece se não
+/// há nada a destacar. Todo o conteúdo remete ao profissional.
+class _PainelInsights extends StatelessWidget {
+  final Map<String, dynamic> dados;
+  const _PainelInsights({required this.dados});
+
+  @override
+  Widget build(BuildContext context) {
+    final notas = gerarInsightsRotulo(dados);
+    if (notas.isEmpty) return const SizedBox.shrink();
+    return Consumer<PremiumService>(
+      builder: (ctx, premium, _) => premium.isPremium
+          ? _PainelPremium(notas: notas)
+          : _TeaserInsights(qtd: notas.length),
+    );
+  }
+}
+
+class _TeaserInsights extends StatelessWidget {
+  final int qtd;
+  const _TeaserInsights({required this.qtd});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: RecorpoSpacing.xl),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PaywallScreen()),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(RecorpoSpacing.md),
+          decoration: BoxDecoration(
+            color: RecorpoColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(RecorpoSpacing.radiusMd),
+            border: Border.all(
+                color: RecorpoColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: RecorpoColors.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Análise educativa da IA',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$qtd ${qtd == 1 ? "ponto" : "pontos"} sobre este '
+                      'rótulo, ligados ao seu tratamento — no Premium.',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.lock_outline,
+                  size: 18, color: RecorpoColors.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PainelPremium extends StatelessWidget {
+  final List<RotuloInsight> notas;
+  const _PainelPremium({required this.notas});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: RecorpoSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome,
+                  size: 18, color: RecorpoColors.primary),
+              const SizedBox(width: 8),
+              const Text('Análise educativa',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              if (!kInsightsRevisadoClinicamente) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: RecorpoColors.eixoStreak.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('em revisão clínica',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: RecorpoColors.eixoStreakDark)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final nota in notas)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    nota.atencao
+                        ? Icons.info_outline
+                        : Icons.check_circle_outline,
+                    size: 18,
+                    color: nota.atencao
+                        ? RecorpoColors.eixoStreakDark
+                        : RecorpoColors.eixoPeso,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(nota.texto,
+                            style: TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: scheme.onSurface
+                                    .withValues(alpha: 0.9))),
+                        const SizedBox(height: 2),
+                        Text('Fonte: ${nota.fonte}',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: scheme.onSurface.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(RecorpoSpacing.radiusSm),
+            ),
+            child: Text(
+              'Conteúdo educativo, não prescritivo. Não substitui avaliação '
+              'profissional — consulte seu médico ou nutricionista.',
+              style: TextStyle(
+                  fontSize: 11, color: Colors.grey.shade600, height: 1.4),
+            ),
           ),
         ],
       ),
