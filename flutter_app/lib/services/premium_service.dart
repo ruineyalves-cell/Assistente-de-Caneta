@@ -137,7 +137,10 @@ class PremiumService extends ChangeNotifier {
 /// Enum das features controladas por paywall. Central pra evitar strings
 /// mágicas espalhadas nos widgets.
 enum Feature {
-  cameraRefeicao,
+  // Cota ÚNICA de IA de visão (Gemini): refeição + rótulo + bula.
+  // Antes só a refeição contava; rótulo/bula ficavam ilimitados no Free
+  // (vazamento de custo Gemini + Premium "IA ilimitada" não vendia nada).
+  iaVisao,
   ocrPrescricao,
   widgetAguaSilencioso,
   pdfMedico,
@@ -153,8 +156,8 @@ class FeaturePolicy {
     // Regras do Free: alguns liberados com quota (a quota fica no chamador,
     // aqui é só sim/não para o paywall).
     switch (f) {
-      case Feature.cameraRefeicao:
-        return true; // Free: 1x/dia (quota controlada em outro lugar)
+      case Feature.iaVisao:
+        return true; // Free com cota diária (refeição+rótulo+bula juntos)
       case Feature.ocrPrescricao:
         return true; // Free: 1x/semana
       case Feature.widgetAguaSilencioso:
@@ -172,11 +175,12 @@ class FeaturePolicy {
 
   /// Quotas do Free por período. Retorna null para features Pro-only.
   ///
-  /// Camera de refeição: 3/dia — o suficiente para café/almoço/janta.
-  /// Além disso, aparece o upsell Premium (Lote 27).
+  /// IA de visão: 3/dia COMPARTILHADOS entre refeição, rótulo e bula —
+  /// cobre ~almoço + janta + uma checagem de rótulo. Ao estourar, aparece
+  /// o upsell Premium. Premium = IA ilimitada.
   static ({int limite, Duration periodo})? quotaFree(Feature f) {
     switch (f) {
-      case Feature.cameraRefeicao:
+      case Feature.iaVisao:
         return (limite: 3, periodo: const Duration(days: 1));
       case Feature.ocrPrescricao:
         return (limite: 1, periodo: const Duration(days: 7));

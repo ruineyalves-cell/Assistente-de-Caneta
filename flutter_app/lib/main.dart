@@ -2358,41 +2358,49 @@ class _DicaDoDiaHumana extends StatelessWidget {
   }
 }
 
-/// Lote 21 + 25 + 27 — Fluxo completo de escanear refeição.
-/// Extraído para top-level para poder ser reusado (EixoCard do Hero + botão
-/// da linha _ScannersRow). Lote 27 acrescentou o gate de quota Free:
-/// se o usuário Grátis passou de 3 fotos no dia, mostra o
-/// QuotaExceededSheet ofertando Premium em vez de abrir a câmera.
-Future<void> abrirFluxoRefeicao(BuildContext context) async {
+/// Gate da COTA ÚNICA de IA de visão (refeição + rótulo + bula — todos
+/// consomem Gemini e dividem a mesma cota diária do Free). Retorna true se
+/// pode escanear; se estourou o Free, mostra o paywall/isca e retorna false.
+/// NÃO conta uso aqui — só após um scan bem-sucedido (via [_contarIaVisao]),
+/// pra cancelar a câmera não gastar cota.
+Future<bool> _podeUsarIaVisao(BuildContext context, {required String acao}) async {
   final premium = context.read<PremiumService>();
-  final uso = FeatureUsageService();
-  final podeUsar = await uso.podeConsumir(
-    Feature.cameraRefeicao,
-    premium: premium.isPremium,
-  );
-
-  if (!context.mounted) return;
-  if (!podeUsar) {
-    final quota = FeaturePolicy.quotaFree(Feature.cameraRefeicao)!;
+  final pode = await FeatureUsageService()
+      .podeConsumir(Feature.iaVisao, premium: premium.isPremium);
+  if (!context.mounted) return false;
+  if (!pode) {
+    final quota = FeaturePolicy.quotaFree(Feature.iaVisao)!;
     await mostrarQuotaExcedida(
       context,
-      feature: Feature.cameraRefeicao,
+      feature: Feature.iaVisao,
       eixo: EixoRecorpo.refeicao,
-      tituloFeature: 'escanear refeição',
+      tituloFeature: acao,
       limite: quota.limite,
       periodoLabel: 'hoje',
     );
-    return;
+    return false;
   }
+  return true;
+}
+
+/// Conta 1 uso de IA de visão. Chamar só após um scan bem-sucedido.
+Future<void> _contarIaVisao(BuildContext context) async {
+  final premium = context.read<PremiumService>();
+  await FeatureUsageService()
+      .incrementar(Feature.iaVisao, premium: premium.isPremium);
+}
+
+/// Lote 21 + 25 + 27 — Fluxo completo de escanear refeição.
+/// Extraído para top-level para poder ser reusado (EixoCard do Hero + botão
+/// da linha _ScannersRow). Gate de cota unificada de IA (refeição/rótulo/bula).
+Future<void> abrirFluxoRefeicao(BuildContext context) async {
+  if (!await _podeUsarIaVisao(context, acao: 'escanear refeição')) return;
 
   final foto = await Navigator.of(context).push<XFile?>(
     MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
   );
   if (foto == null || !context.mounted) return;
-  // Só conta o uso depois que a câmera efetivamente retornou uma foto —
-  // cancelar antes de tirar não gasta cota.
-  await uso.incrementar(Feature.cameraRefeicao, premium: premium.isPremium);
-
+  await _contarIaVisao(context);
   if (!context.mounted) return;
   final descricao = await Navigator.of(context).push<String?>(
     MaterialPageRoute(builder: (_) => MealResultScreen(foto: foto)),
@@ -2411,11 +2419,16 @@ class _ScannersRow extends StatelessWidget {
   Future<void> _capturarPara(
     BuildContext context, {
     required Widget Function(XFile foto) telaResultado,
+    required String acao,
   }) async {
+    // Rótulo e bula também chamam Gemini → mesma cota de IA da refeição.
+    if (!await _podeUsarIaVisao(context, acao: acao)) return;
     final foto = await Navigator.of(context).push<XFile?>(
       MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
     );
     if (foto == null || !context.mounted) return;
+    await _contarIaVisao(context);
+    if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => telaResultado(foto)),
     );
@@ -2457,6 +2470,7 @@ class _ScannersRow extends StatelessWidget {
                 onPressed: () => _capturarPara(
                   context,
                   telaResultado: (f) => RotuloResultScreen(foto: f),
+                  acao: 'ler o rótulo',
                 ),
                 icon: const Icon(Icons.label_outlined, size: 18),
                 label: const Text('Rótulo',
@@ -2474,6 +2488,7 @@ class _ScannersRow extends StatelessWidget {
                 onPressed: () => _capturarPara(
                   context,
                   telaResultado: (f) => BulaResultScreen(foto: f),
+                  acao: 'ler a bula',
                 ),
                 icon: const Icon(Icons.menu_book_outlined, size: 18),
                 label: const Text('Bula',
