@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/theme.dart';
+import 'eixo_icone_animado.dart';
 
 /// Card grande de eixo — visual estilo Samsung Health.
 ///
@@ -50,7 +51,7 @@ class EixoCard extends StatelessWidget {
             Positioned(
               top: -12,
               right: -12,
-              child: EixoIlustracao(eixo: eixo, size: 130),
+              child: EixoIconeAnimado(eixo: eixo, size: 130),
             ),
             // Conteúdo
             Padding(
