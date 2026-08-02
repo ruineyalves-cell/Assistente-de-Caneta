@@ -280,9 +280,36 @@ class ApiService {
 
   // ========== MEDICAÇÕES ==========
 
+  /// Retenta uma chamada IDEMPOTENTE (GET) algumas vezes em falhas
+  /// transitórias — 502/503/504 (backend reiniciando num deploy) ou erro
+  /// de conexão/timeout (4G ruim). Não retenta 4xx "de verdade"
+  /// (401/403/404) nem erros não-transitórios. Backoff linear.
+  Future<T> _comRetry<T>(
+    Future<T> Function() acao, {
+    int tentativas = 3,
+    Duration espera = const Duration(seconds: 2),
+  }) async {
+    late DioException ultimo;
+    for (var i = 0; i < tentativas; i++) {
+      try {
+        return await acao();
+      } on DioException catch (e) {
+        ultimo = e;
+        final code = e.response?.statusCode;
+        final transitorio =
+            code == null || code == 502 || code == 503 || code == 504;
+        if (!transitorio || i == tentativas - 1) rethrow;
+        await Future<void>.delayed(espera * (i + 1));
+      }
+    }
+    throw ultimo;
+  }
+
   Future<List<Map<String, dynamic>>> listarMedicacoes() async {
     try {
-      final response = await _dio.get('/api/medicacoes');
+      // Retry transparente: cobre a janela de restart do backend e piscadas
+      // de rede, evitando a lista de medicação aparecer vazia sem motivo.
+      final response = await _comRetry(() => _dio.get('/api/medicacoes'));
       // Backend responde { medicacoes: [...] }.
       final data = response.data as Map<String, dynamic>;
       return List<Map<String, dynamic>>.from(
