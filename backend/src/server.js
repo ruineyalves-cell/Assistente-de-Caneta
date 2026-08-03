@@ -11,7 +11,18 @@ const PORT = Number(process.env.PORT) || 3000;
 const MIGRATIONS_DIR = path.join(__dirname, '..', '..', 'database', 'migrations');
 
 async function main() {
-  await aplicarMigrationsPendentes({ db, logger, capturarAviso, dir: MIGRATIONS_DIR });
+  // Migrations no boot são BEST-EFFORT. O role da app (ex.: appuser2) pode não
+  // ter privilégio pra criar o ledger ou aplicar DDL — isso é feito via CI como
+  // owner (.github/workflows/migrate-postgres.yml). Uma falha aqui NUNCA pode
+  // derrubar o servidor; apenas registramos (alerta no Sentry).
+  try {
+    await aplicarMigrationsPendentes({ db, logger, capturarAviso, dir: MIGRATIONS_DIR });
+  } catch (err) {
+    capturarAviso(
+      'migrations no boot falharam — servidor sobe assim mesmo (aplicadas via CI como owner)',
+      { evento: 'boot_migrations_falha', code: err && err.code, msg: err && err.message }
+    );
+  }
 
 
   // Job de purga LGPD: elimina definitivamente contas com purge_after vencido.

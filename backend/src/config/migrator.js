@@ -28,12 +28,24 @@ async function aplicarMigrationsPendentes({ db, logger, capturarAviso, dir }) {
 
   // Ledger criado AQUI (não como arquivo de migration) pra evitar
   // ovo-e-galinha: precisa existir antes de consultarmos o que já rodou.
-  await db.query(
-    `CREATE TABLE IF NOT EXISTS schema_migrations (
-       filename   text PRIMARY KEY,
-       applied_at timestamptz NOT NULL DEFAULT now()
-     )`
+  //
+  // O role da app (ex.: appuser2) pode NÃO ter CREATE no schema public. E
+  // `CREATE TABLE IF NOT EXISTS` ainda checa o privilégio de CREATE mesmo
+  // quando a tabela já existe → 42501 que derrubaria o boot. Por isso
+  // checamos a existência com to_regclass (um SELECT, que o role tem) e só
+  // tentamos criar se realmente faltar (banco novo / rodando como owner).
+  const { rows: ledgerRows } = await db.query(
+    `SELECT to_regclass('public.schema_migrations') AS existe`
   );
+  const ledgerJaExiste = ledgerRows[0] && ledgerRows[0].existe != null;
+  if (!ledgerJaExiste) {
+    await db.query(
+      `CREATE TABLE IF NOT EXISTS schema_migrations (
+         filename   text PRIMARY KEY,
+         applied_at timestamptz NOT NULL DEFAULT now()
+       )`
+    );
+  }
 
   const arquivos = fs
     .readdirSync(dir)
