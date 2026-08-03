@@ -26,3 +26,13 @@ services:
     plan: starter
     region: ohio
     healthCheckPath: /health
+    # Só reconstrói/reinicia o backend quando o que muda é dele. Pushes que
+    # tocam APENAS o app (flutter_app/**) ou o site (web/**) não disparam
+    # redeploy — fecha a raiz do "medicação some" (backend reiniciava a cada
+    # push de app e o pool caía no meio de uma request). Se um dia o backend
+    # depender de algo fora destas pastas, incluir o caminho aqui.
+    buildFilters:
+      paths:
+        - backend/**
+        - database/**
+        - render.yaml

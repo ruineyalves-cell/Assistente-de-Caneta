@@ -1,0 +1,89 @@
+name: Migrate Postgres (ledger)
+
+# Aplica migrations PENDENTES no Postgres de produção usando a conexão OWNER
+# (secret), rodando o MESMO runner com ledger do boot do backend
+# (src/config/migrator.js). Idempotente: só aplica o que não está no ledger.
+#
+# Por que existe: o role da app no Render não é OWNER da tabela `medications`
+# (nem de algumas outras), então migrations novas eram puladas por 42501 no
+# boot e ficavam re-tentáveis pra sempre. Este job roda como owner e as aplica
+# de vez — sem ninguém abrir o Render Shell na mão.
+#
+# Gatilhos:
+#   - push na main que mexa em database/migrations/** (ou neste workflow):
+#     adiciona-se a migration, aprova-se o push, o CI aplica. (autonomia)
+#   - manual (Actions → "Run workflow") com o input `force` pra re-rodar um
+#     arquivo idempotente que ficou preso no ledger (ex.: 006).
+#
+# Segredo: usa MIGRATION_DATABASE_URL se existir; senão cai no
+# RENDER_POSTGRES_URL (o mesmo que o backup diário já usa). Ambos precisam ser
+# a conexão OWNER do banco. O valor NUNCA é impresso no log.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'database/migrations/**'
+      - '.github/workflows/migrate-postgres.yml'
+      - 'backend/scripts/migrate-ledger.js'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Migrations idempotentes a re-aplicar mesmo se já no ledger (separadas por vírgula). Ex: 006_medications_2026.sql'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Nunca deixar dois jobs de migration correndo ao mesmo tempo no mesmo banco.
+concurrency:
+  group: migrate-postgres
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Validar segredo de banco
+        env:
+          OWNER_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          FALLBACK_URL: ${{ secrets.RENDER_POSTGRES_URL }}
+        run: |
+          if [ -z "$OWNER_URL" ] && [ -z "$FALLBACK_URL" ]; then
+            echo "::error::Nenhum segredo de banco configurado. Adicione MIGRATION_DATABASE_URL (ou RENDER_POSTGRES_URL) em Settings → Secrets → Actions com a conexão OWNER do Postgres."
+            exit 1
+          fi
+          echo "Segredo de banco presente (o valor não será impresso)."
+
+      - name: Instalar deps do backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Aplicar migrations pendentes (ledger, como owner)
+        working-directory: backend
+        env:
+          NODE_ENV: production
+          # Render exige TLS; o cert é self-signed na borda, daí rejectUnauthorized=false.
+          PGSSL: 'true'
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL || secrets.RENDER_POSTGRES_URL }}
+          FORCE_MIGRATIONS: ${{ github.event.inputs.force }}
+        run: node scripts/migrate-ledger.js
+
+      - name: Resumo
+        if: always()
+        run: |
+          echo "### Migração Postgres" >> "$GITHUB_STEP_SUMMARY"
+          echo "Runner: \`scripts/migrate-ledger.js\` (ledger da Fase 2, conexão owner)." >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ github.event.inputs.force }}" ]; then
+            echo "Force: \`${{ github.event.inputs.force }}\` (removidas do ledger e re-aplicadas)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Confira o log do step anterior para o estado do ledger (antes/depois)." >> "$GITHUB_STEP_SUMMARY"
