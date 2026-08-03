@@ -1,0 +1,82 @@
+name: Publish to Play (Internal testing)
+
+# Automatiza o upload do AAB assinado pro track de TESTE INTERNO do Play.
+# ISOLADO do build (não altera build-android-apk.yml): pega o artefato
+# `android-aab` do último build bem-sucedido e sobe via service account.
+#
+# Disparo é SEMPRE manual (workflow_dispatch) — o clique de "Run workflow" é
+# o consentimento explícito de publicação. Nada sobe automático em push.
+#
+# Pré-requisitos (uma vez):
+#   - Secret PLAY_SERVICE_ACCOUNT_JSON = JSON (texto puro, NÃO base64) da
+#     service account play-publisher **rotacionada** (permissão de track/release).
+#   - O app precisa ter AO MENOS 1 release manual no Play. A API do Google
+#     recusa o primeiro release de um app — esse tem que ser feito à mão no
+#     Console. (Depois disso, este workflow assume.)
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Track do Play (internal recomendado)'
+        type: choice
+        options: [internal, alpha]
+        default: internal
+      status:
+        description: 'completed = disponibiliza aos testers | draft = revisar no Console antes'
+        type: choice
+        options: [completed, draft]
+        default: draft
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: publish-play
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar secret da service account
+        env:
+          SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Secret PLAY_SERVICE_ACCOUNT_JSON ausente. Adicione o JSON (texto puro) da service account rotacionada em Settings → Secrets → Actions."
+            exit 1
+          fi
+          echo "Secret presente (valor não impresso)."
+
+      - name: Baixar o AAB assinado do último build de sucesso
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build-android-apk.yml
+          workflow_conclusion: success
+          name: android-aab
+          path: aab
+          if_no_artifact_found: fail
+
+      - name: Conferir o AAB baixado
+        run: |
+          ls -lh aab/
+          test -f aab/app-release.aab || { echo "::error::app-release.aab não encontrado no artefato."; exit 1; }
+
+      - name: Publicar no Play (${{ inputs.track }} / ${{ inputs.status }})
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: br.com.recorpo.app
+          releaseFiles: aab/app-release.aab
+          track: ${{ inputs.track }}
+          status: ${{ inputs.status }}
+
+      - name: Resumo
+        if: always()
+        run: |
+          echo "### Publicação Play" >> "$GITHUB_STEP_SUMMARY"
+          echo "Track: \`${{ inputs.track }}\` · Status: \`${{ inputs.status }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "AAB: último artefato \`android-aab\` do build-android-apk." >> "$GITHUB_STEP_SUMMARY"
+          echo "Se falhou com 'first release must be made manually', suba 1 versão à mão no Console e rode de novo." >> "$GITHUB_STEP_SUMMARY"
