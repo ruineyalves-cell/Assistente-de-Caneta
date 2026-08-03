@@ -78,6 +78,35 @@ async function executarMigracaoCI({ db, logger, capturarAviso, dir, force = [], 
   await aplicar({ db, logger, capturarAviso, dir });
 }
 
+/**
+ * Loga com QUAL usuário conectamos e quais privilégios ele tem, pra
+ * diagnosticar 42501 (permission denied) sem chute. Best-effort: nunca
+ * derruba o processo. O valor da senha nunca aparece (só o nome do role).
+ */
+async function diagnosticarConexao({ db, logger }) {
+  try {
+    const { rows } = await db.query(
+      `SELECT current_user AS usuario,
+              current_database() AS banco,
+              has_schema_privilege(current_user, 'public', 'CREATE') AS pode_criar_no_public,
+              (SELECT tableowner FROM pg_tables
+                 WHERE schemaname = 'public' AND tablename = 'medications') AS dono_da_medications,
+              CASE WHEN to_regclass('public.medications') IS NOT NULL
+                   THEN has_table_privilege(current_user, 'public.medications', 'INSERT')
+                   ELSE NULL END AS pode_inserir_em_medications`
+    );
+    logger.info(
+      { evento: 'migrate_ci_diagnostico', ...rows[0] },
+      'diagnóstico de conexão/privilégios (quem sou e o que posso)'
+    );
+  } catch (e) {
+    logger.warn(
+      { evento: 'migrate_ci_diagnostico_falha', err: e.message },
+      'não consegui rodar o diagnóstico de privilégios'
+    );
+  }
+}
+
 async function main() {
   const { logger, capturarAviso } = require('../src/utils/logger');
 
@@ -92,6 +121,10 @@ async function main() {
   const db = require('../src/config/db');
   const { aplicarMigrationsPendentes } = require('../src/config/migrator');
   const force = parseForceList(process.env.FORCE_MIGRATIONS);
+
+  // Diagnóstico primeiro: se der 42501 adiante, o log já mostra o role e os
+  // privilégios, apontando exatamente qual conexão (owner) usar.
+  await diagnosticarConexao({ db, logger });
 
   // Snapshot do ledger antes (auditoria no log do CI; nada sensível).
   try {
