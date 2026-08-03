@@ -31,6 +31,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int? _medicacaoId;
   List<Map<String, dynamic>> _medicacoesDisponiveis = const [];
   bool _carregandoMedicacoes = false;
+  // Distingue "falha ao buscar o catálogo (rede/servidor)" de "categoria
+  // realmente vazia" — evita que uma piscada de rede pareça lista vazia.
+  bool _erroCatalogo = false;
 
   // Passo 3 — peso atual + meta
   final _pesoAtualCtrl = TextEditingController();
@@ -55,7 +58,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       });
       return;
     }
-    setState(() => _carregandoMedicacoes = true);
+    setState(() {
+      _carregandoMedicacoes = true;
+      _erroCatalogo = false;
+    });
     try {
       final auth = context.read<AuthService>();
       final todas = await auth.apiService.listarMedicacoes();
@@ -80,6 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() {
         _medicacoesDisponiveis = const [];
         _carregandoMedicacoes = false;
+        _erroCatalogo = true;
       });
     }
   }
@@ -260,6 +267,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     medicacaoId: _medicacaoId,
                     carregando: _carregandoMedicacoes,
                     medicacoes: _medicacoesDisponiveis,
+                    erroCatalogo: _erroCatalogo,
+                    onTentarNovamente: () {
+                      if (_eixo != null) _carregarMedicacoesDoEixo(_eixo!);
+                    },
                     onEixoMudou: (novo) {
                       setState(() {
                         _eixo = novo;
@@ -491,6 +502,8 @@ class _PassoMedicacao extends StatelessWidget {
   final int? medicacaoId;
   final bool carregando;
   final List<Map<String, dynamic>> medicacoes;
+  final bool erroCatalogo;
+  final VoidCallback onTentarNovamente;
   final ValueChanged<EixoFarmacologico> onEixoMudou;
   final ValueChanged<int?> onMedicacaoMudou;
 
@@ -500,6 +513,8 @@ class _PassoMedicacao extends StatelessWidget {
     required this.medicacaoId,
     required this.carregando,
     required this.medicacoes,
+    required this.erroCatalogo,
+    required this.onTentarNovamente,
     required this.onEixoMudou,
     required this.onMedicacaoMudou,
   });
@@ -602,6 +617,26 @@ class _PassoMedicacao extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
+              )
+            else if (erroCatalogo)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Não consegui carregar o catálogo agora (rede ou '
+                      'servidor reiniciando). É opcional — dá pra escolher '
+                      'depois no Perfil.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.7)),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: onTentarNovamente,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Tentar de novo'),
+                  ),
+                ],
               )
             else if (medicacoes.isEmpty)
               Text(

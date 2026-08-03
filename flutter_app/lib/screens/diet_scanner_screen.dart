@@ -180,7 +180,7 @@ class _MetasDestacadas extends StatelessWidget {
                   'Nenhuma meta nutricional identificada automaticamente. '
                   'Confira o texto reconhecido abaixo.',
                   style: TextStyle(
-                      fontSize: 12, color: Colors.grey.shade700),
+                      fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -255,7 +255,7 @@ class _TextoBruto extends StatelessWidget {
           child: Text(
             'Nenhum texto reconhecido — tente outra foto ou verifique '
             'iluminação/foco.',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
       );

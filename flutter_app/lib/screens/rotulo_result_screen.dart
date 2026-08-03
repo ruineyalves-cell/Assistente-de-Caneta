@@ -279,7 +279,7 @@ class _TeaserInsights extends StatelessWidget {
                       '$qtd ${qtd == 1 ? "ponto" : "pontos"} sobre este '
                       'rótulo, ligados ao seu tratamento — no Premium.',
                       style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -362,7 +362,7 @@ class _PainelPremium extends StatelessWidget {
                         Text('Fonte: ${nota.fonte}',
                             style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.grey.shade500,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 fontStyle: FontStyle.italic)),
                       ],
                     ),
@@ -380,7 +380,7 @@ class _PainelPremium extends StatelessWidget {
               'Conteúdo educativo, não prescritivo. Não substitui avaliação '
               'profissional — consulte seu médico ou nutricionista.',
               style: TextStyle(
-                  fontSize: 11, color: Colors.grey.shade600, height: 1.4),
+                  fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.4),
             ),
           ),
         ],

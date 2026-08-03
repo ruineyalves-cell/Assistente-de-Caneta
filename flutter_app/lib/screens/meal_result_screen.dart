@@ -143,7 +143,10 @@ class _MealResultScreenState extends State<MealResultScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('O que tem no prato?')),
-      backgroundColor: AppColors.fundoFrio,
+      // Sem backgroundColor fixo: herda o scaffold do tema (escuro no dark,
+      // claro no light). Antes usava fundoFrio (branco-gelo fixo), que no
+      // tema escuro deixava textos claros (onSurface) ilegíveis — claro sobre
+      // claro. Deixar o tema mandar garante contraste nos dois modos.
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -228,7 +231,7 @@ class _MealResultScreenState extends State<MealResultScreen> {
                   style: const TextStyle(fontSize: 12, color: Colors.redAccent))
             else if (_labelsLocais != null && _labelsLocais!.isEmpty)
               Text('Não identifiquei elementos claros de comida.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700))
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))
             else if (_labelsLocais != null)
               Wrap(
                 spacing: 8,
@@ -274,7 +277,7 @@ class _MealResultScreenState extends State<MealResultScreen> {
             else if (_resultadoBackend == null && !_rodandoBackend)
               Text(
                 'IA detalhada ainda não ativada no servidor — sem custo você fica com o reconhecimento local acima.',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               )
             else if (_resultadoBackend != null) ...[
               if (_resultadoBackend!.titulo != null)

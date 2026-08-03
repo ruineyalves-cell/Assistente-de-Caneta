@@ -92,20 +92,57 @@ class _ReportScreenState extends State<ReportScreen> {
           ? _Erro(mensagem: _erro!, onTentar: _gerar)
           : _pdfBytes == null
               ? const Center(child: CircularProgressIndicator())
-              : PdfPreview(
-                  build: (format) async => _pdfBytes!,
-                  allowPrinting: true,
-                  allowSharing: true,
-                  canChangeOrientation: false,
-                  canChangePageFormat: false,
-                  canDebug: false,
-                  pdfFileName: 'recorpo-relatorio.pdf',
-                  actionBarTheme: const PdfActionBarTheme(
-                    backgroundColor: AppColors.azulClinico,
-                    iconColor: Colors.white,
-                    textStyle: TextStyle(color: Colors.white),
-                  ),
-                ),
+              : _PdfPronto(bytes: _pdfBytes!),
+    );
+  }
+}
+
+/// PDF gerado com sucesso. Em vez do `PdfPreview` inline (que renderiza o PDF
+/// via renderizador nativo e CRASHAVA em alguns aparelhos), oferecemos as
+/// ações nativas estáveis: compartilhar/salvar (share sheet do SO) e imprimir.
+/// O PDF já está em memória; nada de rasterização inline.
+class _PdfPronto extends StatelessWidget {
+  final Uint8List bytes;
+  const _PdfPronto({required this.bytes});
+
+  @override
+  Widget build(BuildContext context) {
+    final kb = (bytes.lengthInBytes / 1024).toStringAsFixed(0);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.picture_as_pdf, size: 56, color: AppColors.azulClinico),
+          const SizedBox(height: 16),
+          Text('Relatório pronto', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Text(
+            'Compartilhe com seu médico ou salve no aparelho ($kb KB).',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () =>
+                  Printing.sharePdf(bytes: bytes, filename: 'recorpo-relatorio.pdf'),
+              icon: const Icon(Icons.ios_share),
+              label: const Text('Compartilhar / Salvar PDF'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => Printing.layoutPdf(onLayout: (_) async => bytes),
+              icon: const Icon(Icons.print_outlined),
+              label: const Text('Imprimir'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
