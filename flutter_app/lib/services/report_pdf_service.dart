@@ -27,6 +27,17 @@ import '../models/symptom.dart';
 class ReportPdfService {
   const ReportPdfService();
 
+  /// Tetos de segurança para a fonte de dados (export LGPD sem paginação).
+  /// Um paciente com registro diário gera ~365 logs/ano; 400 cobre folgado
+  /// o horizonte que as seções usam sem risco de OOM.
+  static const int _maxLogs = 400;
+  static const int _maxScores = 400;
+
+  /// Corta uma lista aos [max] primeiros itens (os mais recentes, já que o
+  /// backend ordena por data DESC). Barato e sem cópia quando já cabe.
+  static List<dynamic> _limitar(List<dynamic> itens, int max) =>
+      itens.length > max ? itens.sublist(0, max) : itens;
+
   /// Gera o PDF na thread PRINCIPAL (não em isolate).
   ///
   /// Histórico: já foi via `Isolate.run` pra evitar ANR, mas isso causava
@@ -55,8 +66,13 @@ class ReportPdfService {
 
     final usuario = _asMap(exportacao['usuario']);
     final perfil = _asMap(exportacao['perfil']);
-    final logs = _asList(exportacao['registrosDiarios']);
-    final scores = _asList(exportacao['scores']);
+    // Teto de segurança: o relatório reusa o export LGPD, que pode devolver
+    // até 100 mil logs (portabilidade). Descriptografar/analisar tudo isso no
+    // aparelho estoura o heap (OutOfMemory). Os registros vêm ordenados por
+    // data DESC, então os N mais recentes bastam para todas as seções (que já
+    // olham só os últimos 14-28 dias). Mesmo teto para scores.
+    final logs = _limitar(_asList(exportacao['registrosDiarios']), _maxLogs);
+    final scores = _limitar(_asList(exportacao['scores']), _maxScores);
 
     // Métricas derivadas (usadas em várias seções — computa uma vez).
     final entriesSintomas = _extrairSintomas(logs);
@@ -105,10 +121,10 @@ class ReportPdfService {
           _secaoAdesao(adesao),
 
           // 8. Registros diários
-          _secaoLogs('Registros diários (últimos 14 dias)', logs, fmtData),
+          ..._secaoLogs('Registros diários (últimos 14 dias)', logs, fmtData),
 
           // 9. Farmacovigilância (enriquecida com padrão temporal)
-          _secaoFarmacovigilancia(entriesSintomas, fmtData),
+          ..._secaoFarmacovigilancia(entriesSintomas, fmtData),
 
           // 10. Scores
           _secaoScores('Índice de conformidade (28 dias)', scores),
@@ -419,15 +435,25 @@ class ReportPdfService {
   // ============================================================================
   // 7. LOGS DIÁRIOS
   // ============================================================================
-  pw.Widget _secaoLogs(String titulo, List<dynamic> logs, DateFormat fmt) {
+  /// Retorna uma LISTA de widgets (cabeçalho + tabela) em vez de um único
+  /// `pw.Column`. Motivo: `pw.MultiPage` só quebra página ENTRE os filhos de
+  /// topo e trata um `Column` como bloco atômico. Uma tabela top-level, ao
+  /// contrário, pagina sozinha (repetindo o header). Envolver a tabela num
+  /// `Column` (`_secao`) fazia o MultiPage entrar em loop de paginação quando
+  /// a seção passava de uma página → OutOfMemory. Ver também
+  /// [_secaoFarmacovigilancia].
+  List<pw.Widget> _secaoLogs(String titulo, List<dynamic> logs, DateFormat fmt) {
     if (logs.isEmpty) {
-      return _secao(titulo, [
+      return [
+        _secaoHeader(titulo),
         pw.Text('Sem registros no período.',
             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
-      ]);
+        pw.SizedBox(height: 10),
+      ];
     }
     final ultimos = logs.take(14).toList();
-    return _secao(titulo, [
+    return [
+      _secaoHeader(titulo),
       pw.TableHelper.fromTextArray(
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         headerDecoration: const pw.BoxDecoration(color: PdfColors.blue50),
@@ -452,19 +478,25 @@ class ReportPdfService {
           ];
         }).toList(),
       ),
-    ]);
+      pw.SizedBox(height: 10),
+    ];
   }
 
   // ============================================================================
   // 8. FARMACOVIGILÂNCIA (enriquecida com padrão temporal)
   // ============================================================================
-  pw.Widget _secaoFarmacovigilancia(
+  /// Emite cabeçalho + tabelas como filhos de topo (ver nota em
+  /// [_secaoLogs]): as duas tabelas de sintomas podem passar de uma página e
+  /// precisam paginar sozinhas para não estourar a memória.
+  List<pw.Widget> _secaoFarmacovigilancia(
       List<SymptomEntry> entries, DateFormat fmt) {
     if (entries.isEmpty) {
-      return _secao('Farmacovigilância (últimos 14 dias)', [
+      return [
+        _secaoHeader('Farmacovigilância (últimos 14 dias)'),
         pw.Text('Nenhum sintoma registrado no período.',
             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
-      ]);
+        pw.SizedBox(height: 10),
+      ];
     }
     entries.sort((a, b) => b.quando.compareTo(a.quando));
 
@@ -514,7 +546,8 @@ class ReportPdfService {
         e.intensidade == SymptomIntensity.intenso &&
         infoDe(e.tipo).alertaSeIntenso);
 
-    return _secao('Farmacovigilância (últimos 14 dias)', [
+    return [
+      _secaoHeader('Farmacovigilância (últimos 14 dias)'),
       pw.Text(
         'Sintomas autorreportados pelo paciente. Escala 1 (leve) — 2 (moderado) — 3 (intenso).',
         style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
@@ -603,7 +636,8 @@ class ReportPdfService {
       pw.SizedBox(height: 3),
       _fonteReferencia(
           'Reações adversas listadas conforme bulas Anvisa dos análogos GLP-1 (semaglutida, tirzepatida, liraglutida). Perfil individual pode variar.'),
-    ]);
+      pw.SizedBox(height: 10),
+    ];
   }
 
   // ============================================================================
@@ -678,6 +712,25 @@ class ReportPdfService {
                   const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
         ],
       ),
+    );
+  }
+
+  /// Cabeçalho de seção (título + divisória) como widget avulso, para seções
+  /// cujo conteúdo é emitido como filhos de topo do MultiPage (tabelas
+  /// pagináveis). Mantém a mesma aparência do topo de [_secao].
+  pw.Widget _secaoHeader(String titulo) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(titulo,
+            style: pw.TextStyle(
+                fontSize: 12,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue800)),
+        pw.SizedBox(height: 4),
+        pw.Container(height: 0.5, color: PdfColors.grey400),
+        pw.SizedBox(height: 6),
+      ],
     );
   }
 
