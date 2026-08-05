@@ -2,4 +2,5 @@
 <resources>
     <string name="refeicao_widget_desc">Escanear refeição direto da tela inicial</string>
     <string name="agua_widget_desc">Registrar hidratação sem abrir o app (+250 ml / +500 ml)</string>
+    <string name="hoje_widget_desc">Resumo do dia: proteína, água, score e streak — com atalhos de hidratação</string>
 </resources>

@@ -128,4 +128,20 @@ Future<void> callbackAguaWidget(Uri? uri) async {
   await HomeWidget.saveWidgetData<String>(WaterWidgetKeys.data, dataAgora);
 
   await HomeWidget.updateWidget(name: 'AguaWidgetProvider');
+
+  // Reflete o incremento também no widget "Hoje" (mesmo dado de água, não
+  // sensível), sem abrir o app. Os anéis só redesenham na próxima abertura
+  // do app; o NÚMERO de água atualiza na hora. Formatação inline de
+  // propósito — mantém o isolate de background leve, sem importar UI.
+  final meta =
+      await HomeWidget.getWidgetData<int>(WaterWidgetKeys.meta, defaultValue: 0) ??
+          0;
+  final litros = (novoHoje / 1000).toStringAsFixed(1).replaceAll('.', ',');
+  final aguaTxt = meta <= 0
+      ? '$litros L'
+      : (novoHoje >= meta
+          ? 'meta batida · $litros L'
+          : '${(novoHoje / meta * 100).round()}% · $litros L');
+  await HomeWidget.saveWidgetData<String>('hoje_agua', 'Água · $aguaTxt');
+  await HomeWidget.updateWidget(name: 'HojeWidgetProvider');
 }

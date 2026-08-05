@@ -118,6 +118,20 @@
                 android:resource="@xml/agua_widget_info" />
         </receiver>
 
+        <!-- Widget "Recorpo Hoje" (Bloco 1) — resumo do dia (anéis +
+             proteína/água/score/streak) com atalhos +250/+500. Só exibe
+             dados NÃO sensíveis (LGPD): peso e sintomas nunca aparecem. -->
+        <receiver
+            android:name=".HojeWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hoje_widget_info" />
+        </receiver>
+
         <!-- Background receiver do package home_widget — recebe os
              cliques dos botões +250/+500 e enfileira o callback Dart
              para rodar em isolate isolado. -->

@@ -29,11 +29,12 @@ import 'widgets/floating_nav_bar.dart';
 import 'services/greeting_service.dart';
 import 'services/daily_tip_service.dart';
 import 'services/water_widget_service.dart';
+import 'services/hoje_widget_service.dart';
 import 'services/notification_service.dart';
 import 'services/health_connect_service.dart';
 import 'screens/health_hub_screen.dart';
-import 'screens/home/home_consistencia_row.dart';
 import 'screens/home/home_peso_sintomas_row.dart';
+import 'widgets/hoje_hero_card.dart';
 import 'package:camera/camera.dart' show XFile;
 import 'screens/camera_scanner_screen.dart';
 import 'screens/diet_scanner_screen.dart';
@@ -1302,6 +1303,9 @@ class _DashboardPageState extends State<DashboardPage> {
               // compartilharem o aparelho, o próximo login não pode ver
               // dashboard/logs do anterior.
               await context.read<LogsProvider>().limparCache();
+              // Zera o widget "Hoje" da tela inicial pelo mesmo motivo —
+              // não pode manter o resumo do usuário anterior visível.
+              await const HojeWidgetService().limpar();
               if (!context.mounted) return;
               await context.read<AuthService>().logout();
             },
@@ -1554,7 +1558,8 @@ class _HomePageState extends State<HomePage> {
     if (!service.suportado) return;
 
     final auth = context.read<AuthService>();
-    final logs = context.read<LogsProvider>().logs;
+    final logsProvider = context.read<LogsProvider>();
+    final logs = logsProvider.logs;
     final agora = DateTime.now();
 
     // Localiza log de hoje (se existir) para saber o valor atual de água.
@@ -1603,6 +1608,25 @@ class _HomePageState extends State<HomePage> {
     await service.publicarEstado(
       hojeMl: aguaConsolidada,
       metaMl: metaAguaMl,
+      hoje: agora,
+    );
+
+    // (2b) Widget "Hoje" (Bloco 1) — resumo do dia. Só publica dados NÃO
+    // sensíveis (proteína/água/score/streak). Peso e sintomas ficam FORA
+    // do widget (LGPD art. 11) — o app-lock segue a única porta pra eles.
+    final proteinaHojeG = (logHoje?.proteinaG as int?)?.toDouble() ?? 0.0;
+    final metaProteinaG = pesoParaMeta == null
+        ? null
+        : pesoParaMeta *
+            (_perfil?.metaProteinaGkg ??
+                AppConstants.defaultMetaProteinaGkg);
+    await const HojeWidgetService().publicarEstado(
+      score: logsProvider.scoreToday,
+      proteinaHojeG: proteinaHojeG,
+      proteinaMetaG: metaProteinaG,
+      aguaHojeMl: aguaConsolidada,
+      aguaMetaMl: metaAguaMl,
+      streak: logsProvider.streak,
       hoje: agora,
     );
 
@@ -1979,6 +2003,26 @@ class _HomePageState extends State<HomePage> {
                       : null,
                 ),
                 const SizedBox(height: 16),
+                // BLOCO 1 — Resumo de hoje (hero de anéis). READ-ONLY:
+                // espelha proteína/água/score/peso/streak/sintomas num
+                // relance, sem fonte de dados nova. As ações continuam nos
+                // cards de eixo abaixo (caminho de escrita único no
+                // LogsProvider). Streak/Score saíram da linha própria — agora
+                // vivem aqui, evitando redundância.
+                HojeHeroCard(
+                  proteinaConsumidaG: consumidoProteinaG,
+                  proteinaMetaG: metaProteinaG,
+                  aguaConsumidaMl: consumidoAguaMl,
+                  aguaMetaMl: metaAguaMl,
+                  score: logsProvider.scoreToday,
+                  pesoAtualKg: pesoAtual,
+                  pesoDeltaKg: (pesoAtual != null && pesoAnterior != null)
+                      ? pesoAtual - pesoAnterior
+                      : null,
+                  streak: logsProvider.streak,
+                  sintomasHoje: derivarSintomasHoje(logsProvider.logs),
+                ),
+                const SizedBox(height: 16),
                 // 4) HERO — grid 2×2 de EixoCards (Lote 26)
                 //    Cada card mostra o estado real do dia e leva pra
                 //    ação/detalhe. Visual estilo Samsung Health.
@@ -2065,13 +2109,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                // 5) Consistência — streak + score.
-                // Fase 3 (piloto): extraído pra HomeConsistenciaRow —
-                // const + Selector + RepaintBoundary. Não reconstrói quando
-                // outros campos do LogsProvider mudam (ex.: água). Ver o
-                // cabeçalho de home_consistencia_row.dart pro padrão.
-                const HomeConsistenciaRow(),
-                const SizedBox(height: 20),
+                // Consistência (streak + score) agora vive no Bloco 1 —
+                // Resumo de hoje (topo). A antiga HomeConsistenciaRow foi
+                // removida daqui para não duplicar a informação.
                 // 5) CTA principal — Registrar de hoje sobe pra posição
                 //    de destaque (era no fim; agora vem antes dos dados)
                 SizedBox(
