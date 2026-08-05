@@ -5,33 +5,40 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const shots = [
   {
-    file: '/screenshots/screenshot-1-boas-vindas.png',
-    title: 'Boas-vindas',
+    file: '/screenshots/screenshot-1-dashboard.png',
+    title: 'Seu dia num relance',
     caption:
-      'Onboarding em 3 telas — menos de 1 minuto até o primeiro registro.',
+      'O resumo "Hoje" abre o app: Score, proteína, água e streak — a consistência que o tratamento pede, num olhar.',
   },
   {
-    file: '/screenshots/screenshot-2-dashboard.png',
-    title: 'Dashboard',
+    file: '/screenshots/screenshot-2-agua.png',
+    title: 'Hidratação sem esforço',
     caption:
-      'Quatro eixos numa tela — refeição, água, peso e sintomas em vista única.',
+      '+250, +500, +750 ml ou +1 L num toque. Meta calculada pelo seu peso — sem sede acumulada.',
   },
   {
-    file: '/screenshots/screenshot-3-lembrete-dose.png',
-    title: 'Lembrete da dose',
+    file: '/screenshots/screenshot-3-sintomas.png',
+    title: 'Farmacovigilância séria',
     caption:
-      'Notificação véspera + no dia. Escolhe o dia da semana e o horário.',
+      'Sintomas curados de bulas Anvisa, registrados com intensidade. O que merece conversa com o médico fica anotado.',
   },
   {
-    file: '/screenshots/screenshot-4-sintomas.png',
-    title: 'Sintomas',
+    file: '/screenshots/screenshot-4-peso.png',
+    title: 'Peso sem drama',
     caption:
-      '15 sintomas curados de bulas Anvisa, registrados com intensidade.',
+      'Registre onde se pesou — casa, academia, farmácia. A curva fica mais confiável pra você e pro seu médico.',
   },
   {
-    file: '/screenshots/screenshot-5-pdf-medico.png',
-    title: 'PDF médico',
-    caption: 'Um clique gera relatório completo em PDF para levar à consulta.',
+    file: '/screenshots/screenshot-5-progresso.png',
+    title: 'Evolução de verdade',
+    caption:
+      'Composição, macros de blindagem e o Score dos últimos 28 dias. Progresso honesto, sem promessa milagrosa.',
+  },
+  {
+    file: '/screenshots/screenshot-6-historico.png',
+    title: 'Histórico completo',
+    caption:
+      'Cada dia registrado, completo ou não. É essa história que vira o relatório pronto pra consulta.',
   },
 ];
 
@@ -138,7 +145,7 @@ export default function ScreenshotsGallery() {
               }}
             >
               <div
-                className={`relative w-[280px] sm:w-[340px] md:w-[380px] aspect-[9/16] rounded-3xl overflow-hidden border transition-shadow ${
+                className={`relative w-[280px] sm:w-[340px] md:w-[380px] aspect-[9/18] rounded-3xl overflow-hidden border transition-shadow ${
                   isActive
                     ? 'border-brand-primaryLight shadow-glow'
                     : 'border-white/[0.08] shadow-2xl shadow-black/60'
