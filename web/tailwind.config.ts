@@ -99,6 +99,11 @@ const config: Config = {
           '0%, 100%': { strokeDashoffset: '55' },
           '50%': { strokeDashoffset: '30' },
         },
+        scanline: {
+          '0%': { top: '6%', opacity: '0.2' },
+          '50%': { top: '90%', opacity: '1' },
+          '100%': { top: '6%', opacity: '0.2' },
+        },
       },
       animation: {
         drift: 'drift 22s ease-in-out infinite',
@@ -110,6 +115,7 @@ const config: Config = {
         'hero-draw': 'hero-draw 3.2s ease-out infinite',
         'hero-water': 'hero-water 5s ease-in-out infinite',
         'hero-waterRing': 'hero-waterRing 6s ease-in-out infinite',
+        scanline: 'scanline 3s ease-in-out infinite',
       },
     },
   },

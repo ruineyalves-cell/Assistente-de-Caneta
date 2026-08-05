@@ -44,12 +44,12 @@ export default function Nav() {
           >
             Entrar
           </Link>
-          <Link
-            href="/#baixar"
+          <a
+            href="https://play.google.com/store/apps/details?id=br.com.recorpo.app"
             className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-primary-gradient text-white shadow-glowSoft hover:brightness-110 transition-all"
           >
             Baixe grátis
-          </Link>
+          </a>
         </div>
       </div>
     </header>

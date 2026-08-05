@@ -4,6 +4,8 @@ import EixoCards from '@/components/eixo-cards';
 import RevealOnScroll from '@/components/reveal-on-scroll';
 import ScreenshotsGallery from '@/components/screenshots-gallery';
 import HeroDashboard from '@/components/hero-dashboard';
+import HomeWidgetShowcase from '@/components/home-widget-showcase';
+import AiCapture from '@/components/ai-capture';
 
 export default function Home() {
   return (
@@ -38,10 +40,10 @@ export default function Home() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href="#baixar"
+                href="https://play.google.com/store/apps/details?id=br.com.recorpo.app"
                 className="inline-flex items-center gap-2 font-semibold px-6 py-3.5 rounded-full bg-primary-gradient text-white shadow-glow hover:shadow-glowSoft hover:-translate-y-0.5 transition-all"
               >
-                Baixar grátis
+                Baixar no Google Play
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -85,15 +87,29 @@ export default function Home() {
               Por dentro do app
             </p>
             <h2 className="font-serif text-4xl md:text-5xl text-recorpo-text">
-              Sério e claro, do onboarding ao PDF do médico.
+              Sério e claro — do resumo do dia ao histórico da consulta.
             </h2>
             <p className="mt-4 text-recorpo-dim">
-              Cinco telas que resumem o dia-a-dia com o Recorpo. Toca em qualquer
-              uma pra abrir em foco.
+              A nova cara do Recorpo, tela a tela. Toca em qualquer uma pra ver
+              de perto.
             </p>
           </div>
 
           <ScreenshotsGallery />
+        </section>
+      </RevealOnScroll>
+
+      {/* ===== CÂMERA COM IA ===== */}
+      <RevealOnScroll>
+        <section id="ia" className="relative max-w-6xl mx-auto px-5 py-24">
+          <AiCapture />
+        </section>
+      </RevealOnScroll>
+
+      {/* ===== WIDGET DE TELA INICIAL ===== */}
+      <RevealOnScroll>
+        <section id="widget" className="relative max-w-6xl mx-auto px-5 py-24">
+          <HomeWidgetShowcase />
         </section>
       </RevealOnScroll>
 
@@ -117,6 +133,65 @@ export default function Home() {
         </section>
       </RevealOnScroll>
 
+      {/* ===== ACOMPANHAMENTO MÉDICO ===== */}
+      <RevealOnScroll>
+        <section id="acompanhamento" className="relative max-w-6xl mx-auto px-5 py-24">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <p className="text-[11px] tracking-[0.28em] font-semibold text-brand-primaryLight uppercase mb-3">
+                Acompanhamento
+              </p>
+              <h2 className="font-serif text-4xl md:text-5xl text-recorpo-text leading-[1.05]">
+                Do seu esforço{' '}
+                <span className="italic bg-primary-gradient bg-clip-text text-transparent">
+                  à consulta.
+                </span>
+              </h2>
+              <p className="mt-5 text-recorpo-dim text-lg leading-relaxed">
+                Quem registra o dia a dia chega na consulta com a história
+                inteira — não só o número da balança. O Recorpo transforma seus
+                registros num <strong className="text-recorpo-text">relatório
+                em PDF</strong> que seu médico ou nutricionista lê em segundos:
+                adesão à dose, evolução de peso, proteína, hidratação e
+                sintomas.
+              </p>
+              <p className="mt-4 text-recorpo-dim leading-relaxed">
+                Decisão baseada em dado, não em memória. É assim que o
+                acompanhamento vira{' '}
+                <span className="text-recorpo-text font-semibold">
+                  mais sucesso na sua jornada
+                </span>
+                .
+              </p>
+              <div className="mt-8">
+                <a
+                  href="#baixar"
+                  className="inline-flex items-center gap-2 font-semibold px-6 py-3.5 rounded-full bg-primary-gradient text-white shadow-glowSoft hover:-translate-y-0.5 transition-transform"
+                >
+                  Começar a acompanhar
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 12h14M13 6l6 6-6 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <MiniCard title="Adesão à dose" body="Regularidade da aplicação, semana a semana." accent="text-brand-primaryLight" />
+              <MiniCard title="Evolução real" body="Peso e kg/semana, sem promessa milagrosa." accent="text-eixo-peso" />
+              <MiniCard title="Proteína & água" body="Metas pelo seu peso, batidas ou não." accent="text-eixo-agua" />
+              <MiniCard title="Sintomas" body="Farmacovigilância curada de bulas Anvisa." accent="text-eixo-sintomas" />
+            </div>
+          </div>
+        </section>
+      </RevealOnScroll>
+
       {/* ===== BAIXAR ===== */}
       <RevealOnScroll>
         <section id="baixar" className="relative max-w-4xl mx-auto px-5 py-24 text-center">
@@ -134,7 +209,7 @@ export default function Home() {
             </p>
             <div className="relative mt-8 flex flex-wrap justify-center gap-3">
               <a
-                href="https://play.google.com/store/apps/details?id=com.recorpo.app"
+                href="https://play.google.com/store/apps/details?id=br.com.recorpo.app"
                 className="inline-flex items-center gap-2 font-semibold px-6 py-3.5 rounded-full bg-primary-gradient text-white shadow-glow hover:-translate-y-0.5 transition-transform"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -170,6 +245,23 @@ function Stat({ n, l }: { n: string; l: string }) {
       <div className="text-[11px] text-recorpo-muted mt-1.5 leading-tight">
         {l}
       </div>
+    </div>
+  );
+}
+
+function MiniCard({
+  title,
+  body,
+  accent,
+}: {
+  title: string;
+  body: string;
+  accent: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-recorpo-surface/60 backdrop-blur-md p-5">
+      <div className={`font-semibold ${accent}`}>{title}</div>
+      <p className="mt-1.5 text-recorpo-dim text-sm leading-relaxed">{body}</p>
     </div>
   );
 }
