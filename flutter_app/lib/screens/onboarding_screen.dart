@@ -669,7 +669,12 @@ class _PassoMedicacao extends StatelessWidget {
                       ),
                       ...medicacoes.map((m) {
                         final id = m['id'] as int;
-                        final nome = (m['nome'] as String?) ?? '—';
+                        // O catálogo do backend devolve `nome_comercial`
+                        // (ver medicationModel.listarAtivas). O fallback p/
+                        // `nome` cobre payloads antigos/alternativos.
+                        final nome =
+                            (m['nome_comercial'] ?? m['nome']) as String? ??
+                                '—';
                         return DropdownMenuItem<int?>(
                           value: id,
                           child: Text(nome, overflow: TextOverflow.ellipsis),
